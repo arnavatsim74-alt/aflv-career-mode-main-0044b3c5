@@ -77,11 +77,15 @@ export function AdminPendingPireps() {
       // Fetch profiles for each PIREP
       const pirepsWithProfiles = await Promise.all(
         data.map(async (pirep) => {
-          const { data: profileData } = await supabase
+          const { data: profileData, error: profileErr } = await supabase
             .from('profiles')
             .select('name, callsign, base_airport')
             .eq('user_id', pirep.user_id)
-            .single();
+            .maybeSingle();
+
+          if (profileErr) {
+            console.error('Error fetching profile for PIREP:', profileErr);
+          }
           
           // Fetch base multiplier
           let baseMultiplier = 1;
@@ -158,22 +162,42 @@ export function AdminPendingPireps() {
     }
 
     // Update pilot profile
-    const { data: currentProfile } = await supabase
+    const { data: currentProfile, error: profileFetchError } = await supabase
       .from('profiles')
       .select('xp, money, total_hours, total_flights')
       .eq('user_id', pirep.user_id)
-      .single();
+      .maybeSingle();
 
-    if (currentProfile) {
-      await supabase
-        .from('profiles')
-        .update({
-          xp: (currentProfile.xp || 0) + totalXP,
-          money: (Number(currentProfile.money) || 0) + totalMoney,
-          total_hours: (Number(currentProfile.total_hours) || 0) + pirep.flight_time_hrs,
-          total_flights: (currentProfile.total_flights || 0) + 1,
-        })
-        .eq('user_id', pirep.user_id);
+    if (profileFetchError) {
+      console.error('Error fetching pilot profile for stats update:', profileFetchError);
+      toast.error('Approved PIREP, but failed to update pilot stats');
+      fetchPireps();
+      return;
+    }
+
+    if (!currentProfile) {
+      toast.error('Approved PIREP, but pilot profile is missing (please resync user)');
+      fetchPireps();
+      return;
+    }
+
+    const nextTotalHours = (Number(currentProfile.total_hours) || 0) + pirep.flight_time_hrs + (pirep.flight_time_mins || 0) / 60;
+
+    const { error: profileUpdateError } = await supabase
+      .from('profiles')
+      .update({
+        xp: (currentProfile.xp || 0) + totalXP,
+        money: (Number(currentProfile.money) || 0) + totalMoney,
+        total_hours: nextTotalHours,
+        total_flights: (currentProfile.total_flights || 0) + 1,
+      })
+      .eq('user_id', pirep.user_id);
+
+    if (profileUpdateError) {
+      console.error('Error updating pilot stats:', profileUpdateError);
+      toast.error('Approved PIREP, but failed to update pilot stats');
+      fetchPireps();
+      return;
     }
 
     toast.success(`PIREP approved! Awarded ${totalXP} XP and ₹${totalMoney}`);
