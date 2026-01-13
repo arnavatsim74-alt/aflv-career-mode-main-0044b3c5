@@ -19,6 +19,7 @@ const pilotNavItems = [
   { icon: Plane, label: 'Flight Dispatch', href: '/dispatch' },
   { icon: FileText, label: 'Submit PIREP', href: '/pirep' },
   { icon: BookOpen, label: 'My PIREPs', href: '/my-pireps' },
+  { icon: Plane, label: 'Virtual Fleet', href: '/fleet' },
   { icon: Award, label: 'Type Rating Shop', href: '/shop' },
   { icon: Trophy, label: 'Leaderboards', href: '/leaderboards' },
   { icon: BookOpen, label: 'Logbook', href: '/logbook' },
