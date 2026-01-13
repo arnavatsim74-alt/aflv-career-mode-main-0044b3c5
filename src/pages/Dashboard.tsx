@@ -5,7 +5,6 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { SectionCard } from '@/components/ui/section-card';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { NotamCard } from '@/components/dashboard/NotamCard';
-import { VirtualFleetTracker } from '@/components/fleet/VirtualFleetTracker';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { formatCurrency } from '@/lib/currency';
@@ -253,11 +252,6 @@ export default function Dashboard() {
             </div>
           )}
         </SectionCard>
-      </div>
-
-      {/* Virtual Fleet Tracker */}
-      <div className="mt-6">
-        <VirtualFleetTracker />
       </div>
 
       {/* Rank Progress */}

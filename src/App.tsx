@@ -9,6 +9,7 @@ import Dashboard from "./pages/Dashboard";
 import Dispatch from "./pages/Dispatch";
 import SubmitPirep from "./pages/SubmitPirep";
 import MyPireps from "./pages/MyPireps";
+import Fleet from "./pages/Fleet";
 import Shop from "./pages/Shop";
 import Leaderboard from "./pages/Leaderboard";
 import Logbook from "./pages/Logbook";
@@ -35,6 +36,7 @@ const App = () => (
             <Route path="/dispatch" element={<Dispatch />} />
             <Route path="/pirep" element={<SubmitPirep />} />
             <Route path="/my-pireps" element={<MyPireps />} />
+            <Route path="/fleet" element={<Fleet />} />
             <Route path="/shop" element={<Shop />} />
             <Route path="/leaderboards" element={<Leaderboard />} />
             <Route path="/logbook" element={<Logbook />} />

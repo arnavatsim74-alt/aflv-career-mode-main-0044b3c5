@@ -32,8 +32,12 @@ export function AdminRouteCatalog() {
   const importBundled = async () => {
     setIsImporting(true);
     try {
-      const res = await fetch("/data/routes.csv", { cache: "no-store" });
-      if (!res.ok) throw new Error("Bundled routes.csv not found in /public/data/");
+      // Try the new AFL_update.csv first, fallback to routes.csv
+      let res = await fetch("/data/AFL_update.csv", { cache: "no-store" });
+      if (!res.ok) {
+        res = await fetch("/data/routes.csv", { cache: "no-store" });
+      }
+      if (!res.ok) throw new Error("No route CSV found in /public/data/");
       const text = await res.text();
       await importCsvText(text);
     } finally {

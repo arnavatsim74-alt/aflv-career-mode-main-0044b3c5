@@ -5,6 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { AdminCareerRequests } from '@/components/admin/AdminCareerRequests';
 import { AdminPendingPireps } from '@/components/admin/AdminPendingPireps';
 import { AdminRegistrations } from '@/components/admin/AdminRegistrations';
+import { AdminRouteCatalog } from '@/components/admin/AdminRouteCatalog';
 
 export default function AdminPanel() {
   const { user, isAdmin, loading } = useAuth();
@@ -31,6 +32,7 @@ export default function AdminPanel() {
     <DashboardLayout>
       <div className="space-y-6">
         <h1 className="text-2xl font-bold">AFLV vCAREER PANEL</h1>
+        <AdminRouteCatalog />
         <AdminRegistrations />
         <AdminCareerRequests />
         <AdminPendingPireps />
