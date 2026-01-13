@@ -337,15 +337,21 @@ export default function Dispatch() {
     if (error) {
       toast.error('Failed to dispatch flight: ' + error.message);
     } else {
-      toast.success('Flight dispatched! Opening SimBrief...');
+      toast.success('Flight dispatched!');
       
-      // Open SimBrief with flight details
+      // Navigate to embedded SimBrief page instead of opening new window
       if (leg?.route) {
-        const simbriefUrl = buildSimbriefUrl(leg);
-        window.open(simbriefUrl, '_blank');
+        const params = new URLSearchParams({
+          orig: leg.route.departure_airport,
+          dest: leg.route.arrival_airport,
+          fltnum: leg.route.flight_number?.replace(/\D/g, '') || '1234',
+          type: leg.aircraft?.type_code || 'A320',
+          legId: legId,
+        });
+        navigate(`/simbrief?${params.toString()}`);
+      } else {
+        fetchDispatchData();
       }
-      
-      fetchDispatchData();
     }
   };
 
