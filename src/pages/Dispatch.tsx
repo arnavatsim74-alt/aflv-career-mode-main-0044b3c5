@@ -222,9 +222,9 @@ export default function Dispatch() {
 
     try {
       // Get all completed legs for this user
-      const completedLegIds = dispatchLegs
-        .filter((l) => l.status === 'completed' || l.pirep?.status === 'approved')
-        .map((l) => l.id);
+      const completedLegs = dispatchLegs.filter(
+        (l) => l.status === 'completed' || l.pirep?.status === 'approved'
+      );
 
       // Mark legs as completed first
       const legsToComplete = dispatchLegs
@@ -242,6 +242,29 @@ export default function Dispatch() {
           toast.error('Failed to finalize previous legs');
           setIsRequesting(false);
           return;
+        }
+      }
+
+      // Update aircraft status for completed flights - mark each leg's arrival
+      // Get unique tail numbers and their final arrival airports
+      const tailNumber = dispatchLegs[0]?.tail_number;
+      const lastLeg = dispatchLegs[dispatchLegs.length - 1];
+      const totalFlightHours = dispatchLegs.reduce(
+        (sum, leg) => sum + (leg.route?.estimated_time_hrs || 0),
+        0
+      );
+
+      if (tailNumber && lastLeg?.route?.arrival_airport) {
+        // Call the database function to complete the flight and handle maintenance
+        const { error: fleetError } = await supabase.rpc('complete_aircraft_flight', {
+          p_tail_number: tailNumber,
+          p_arrival_airport: lastLeg.route.arrival_airport,
+          p_flight_hours: totalFlightHours,
+        });
+
+        if (fleetError) {
+          console.error('Failed to update fleet status:', fleetError);
+          // Continue anyway - this is not critical to the dispatch flow
         }
       }
 
