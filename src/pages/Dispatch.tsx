@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
-import { Plane, Lock, FileText, Send, AlertCircle, RefreshCw } from 'lucide-react';
+import { Plane, Lock, FileText, Send, AlertCircle, RefreshCw, ExternalLink } from 'lucide-react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { SectionCard } from '@/components/ui/section-card';
 import { StatusBadge } from '@/components/ui/status-badge';
@@ -327,6 +327,8 @@ export default function Dispatch() {
   };
 
   const dispatchFlight = async (legId: string) => {
+    const leg = dispatchLegs.find(l => l.id === legId);
+    
     const { error } = await supabase
       .from('dispatch_legs')
       .update({ status: 'dispatched' })
@@ -335,9 +337,29 @@ export default function Dispatch() {
     if (error) {
       toast.error('Failed to dispatch flight: ' + error.message);
     } else {
-      toast.success('Flight dispatched! Fly safe!');
+      toast.success('Flight dispatched! Opening SimBrief...');
+      
+      // Open SimBrief with flight details
+      if (leg?.route) {
+        const simbriefUrl = buildSimbriefUrl(leg);
+        window.open(simbriefUrl, '_blank');
+      }
+      
       fetchDispatchData();
     }
+  };
+
+  const buildSimbriefUrl = (leg: DispatchLeg) => {
+    const baseUrl = 'https://dispatch.simbrief.com/options/custom';
+    const params = new URLSearchParams({
+      airline: 'AFL', // Aeroflot
+      fltnum: leg.route?.flight_number?.replace(/\D/g, '') || '1234', // Extract flight number digits
+      type: leg.aircraft?.type_code || 'A320',
+      orig: leg.route?.departure_airport || 'UUEE',
+      dest: leg.route?.arrival_airport || 'UUEE',
+    });
+    
+    return `${baseUrl}?${params.toString()}`;
   };
 
   if (loading || isLoading) {
@@ -366,10 +388,12 @@ export default function Dispatch() {
   const totalTime = dispatchLegs.reduce((sum, leg) => sum + (leg.route?.estimated_time_hrs || 0), 0);
 
   const getButtonForLeg = (leg: DispatchLeg, index: number) => {
-    // Check if previous leg is completed (for sequential unlocking)
-    const previousLegCompleted = index === 0 || 
+    // Check if previous leg is completed OR awaiting review (PIREP submitted)
+    // This allows the next leg to be unlocked when previous is awaiting review
+    const previousLegReady = index === 0 || 
       dispatchLegs[index - 1]?.status === 'completed' || 
-      dispatchLegs[index - 1]?.pirep?.status === 'approved';
+      dispatchLegs[index - 1]?.pirep?.status === 'approved' ||
+      dispatchLegs[index - 1]?.pirep?.status === 'pending'; // Unlock when PIREP is pending review
     
     // If leg has a PIREP
     if (leg.pirep) {
@@ -402,7 +426,7 @@ export default function Dispatch() {
     // Based on leg status
     switch (leg.status) {
       case 'assigned':
-        if (!previousLegCompleted) {
+        if (!previousLegReady) {
           return (
             <Button size="sm" variant="secondary" disabled className="gap-2">
               <Lock className="h-4 w-4" />
@@ -557,7 +581,7 @@ export default function Dispatch() {
               key={leg.id}
               className="p-4 bg-secondary/50 rounded-xl border border-border"
             >
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
                 <div>
                   <p className="text-sm text-primary font-medium">LEG {leg.leg_number}</p>
                   <p className="text-lg font-bold text-card-foreground">
@@ -567,8 +591,20 @@ export default function Dispatch() {
                     {leg.route?.distance_nm} NM • {leg.route?.estimated_time_hrs?.toFixed(2)} hrs flight time
                   </p>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 flex-wrap">
                   <StatusBadge status={getLegStatus(leg) as any} />
+                  {/* SimBrief link for dispatched or in-progress legs */}
+                  {(leg.status === 'dispatched' || leg.pirep?.status === 'pending') && (
+                    <a
+                      href={buildSimbriefUrl(leg)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                    >
+                      <ExternalLink className="h-3 w-3" />
+                      SimBrief
+                    </a>
+                  )}
                   {getButtonForLeg(leg, index)}
                 </div>
               </div>

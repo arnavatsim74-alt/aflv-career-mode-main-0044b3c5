@@ -137,6 +137,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { error: new Error(profileError.message), user: null };
       }
 
+      // Create registration approval record for admin to review
+      const { error: regError } = await supabase
+        .from('registration_approvals')
+        .insert({
+          user_id: data.user.id,
+          email: email,
+          name,
+          callsign: callsign.toUpperCase(),
+          base_airport: baseAirport,
+          status: 'pending',
+        });
+
+      if (regError) {
+        console.error('Error creating registration approval:', regError);
+      }
+
       // Assign pilot role
       const { error: roleError } = await supabase
         .from('user_roles')
