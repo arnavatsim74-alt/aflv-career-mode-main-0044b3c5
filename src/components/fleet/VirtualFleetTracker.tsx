@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Plane, Search, Filter } from 'lucide-react';
+import { Plane, Search } from 'lucide-react';
 import { SectionCard } from '@/components/ui/section-card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -20,6 +20,10 @@ interface FleetAircraft {
     name: string;
     family: string;
   };
+  profile?: {
+    callsign: string;
+    name: string;
+  } | null;
 }
 
 export function VirtualFleetTracker() {
@@ -52,7 +56,21 @@ export function VirtualFleetTracker() {
       .order('tail_number');
 
     if (!error && data) {
-      setFleet(data as unknown as FleetAircraft[]);
+      // Fetch profiles for assigned pilots
+      const fleetWithProfiles = await Promise.all(
+        data.map(async (aircraft) => {
+          if (aircraft.assigned_to) {
+            const { data: profileData } = await supabase
+              .from('profiles')
+              .select('callsign, name')
+              .eq('user_id', aircraft.assigned_to)
+              .single();
+            return { ...aircraft, profile: profileData } as FleetAircraft;
+          }
+          return { ...aircraft, profile: null } as FleetAircraft;
+        })
+      );
+      setFleet(fleetWithProfiles);
     }
     
     setIsLoading(false);
@@ -217,7 +235,15 @@ export function VirtualFleetTracker() {
                       </span>
                     </div>
                   </TableCell>
-                  <TableCell>{aircraft.assigned_to ? '●' : '-'}</TableCell>
+                  <TableCell>
+                    {aircraft.profile ? (
+                      <span className="text-foreground">
+                        {aircraft.profile.callsign}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground">-</span>
+                    )}
+                  </TableCell>
                   <TableCell className="text-right">
                     {aircraft.total_hours.toFixed(1)}
                   </TableCell>
