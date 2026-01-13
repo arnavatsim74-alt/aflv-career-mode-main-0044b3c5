@@ -607,6 +607,7 @@ export type Database = {
           current_location: string | null
           id: string
           livery: string | null
+          maintenance_until: string | null
           status: string
           tail_number: string
           total_flights: number
@@ -619,6 +620,7 @@ export type Database = {
           current_location?: string | null
           id?: string
           livery?: string | null
+          maintenance_until?: string | null
           status?: string
           tail_number: string
           total_flights?: number
@@ -631,6 +633,7 @@ export type Database = {
           current_location?: string | null
           id?: string
           livery?: string | null
+          maintenance_until?: string | null
           status?: string
           tail_number?: string
           total_flights?: number
@@ -651,6 +654,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_maintenance_release: { Args: never; Returns: undefined }
+      complete_aircraft_flight: {
+        Args: {
+          p_arrival_airport: string
+          p_flight_hours?: number
+          p_tail_number: string
+        }
+        Returns: undefined
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
