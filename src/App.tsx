@@ -7,6 +7,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Dispatch from "./pages/Dispatch";
+import SimBriefDispatch from "./pages/SimBriefDispatch";
 import SubmitPirep from "./pages/SubmitPirep";
 import MyPireps from "./pages/MyPireps";
 import Fleet from "./pages/Fleet";
@@ -34,6 +35,7 @@ const App = () => (
             <Route path="/pending-approval" element={<PendingApproval />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/dispatch" element={<Dispatch />} />
+            <Route path="/simbrief" element={<SimBriefDispatch />} />
             <Route path="/pirep" element={<SubmitPirep />} />
             <Route path="/my-pireps" element={<MyPireps />} />
             <Route path="/fleet" element={<Fleet />} />
