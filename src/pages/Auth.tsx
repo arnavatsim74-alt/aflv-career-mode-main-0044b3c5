@@ -114,17 +114,6 @@ export default function Auth() {
         description: error.message,
       });
     } else if (newUser) {
-      // Create registration approval record
-      await supabase
-        .from('registration_approvals')
-        .insert({
-          user_id: newUser.id,
-          email: signupEmail,
-          name: signupName,
-          callsign: signupCallsign.toUpperCase(),
-          base_airport: signupBase,
-        });
-
       toast({
         title: 'Application Submitted!',
         description: 'Your pilot application is pending admin approval.',

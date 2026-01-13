@@ -66,11 +66,19 @@ export function AdminRegistrations() {
       return;
     }
 
-    // Update profile to approved
+    // Ensure profile exists + mark approved (upsert fixes missing profile rows)
     const { error: profileError } = await supabase
       .from('profiles')
-      .update({ is_approved: true })
-      .eq('user_id', registration.user_id);
+      .upsert(
+        {
+          user_id: registration.user_id,
+          name: registration.name,
+          callsign: registration.callsign,
+          base_airport: registration.base_airport,
+          is_approved: true,
+        },
+        { onConflict: 'user_id' }
+      );
 
     if (profileError) {
       toast({
@@ -80,6 +88,14 @@ export function AdminRegistrations() {
       });
       return;
     }
+
+    // Ensure pilot role exists
+    await supabase
+      .from('user_roles')
+      .upsert(
+        { user_id: registration.user_id, role: 'pilot' },
+        { onConflict: 'user_id,role' }
+      );
 
     toast({
       title: 'Registration Approved',

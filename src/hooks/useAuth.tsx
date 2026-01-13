@@ -39,15 +39,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const fetchProfile = async (userId: string) => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('profiles')
       .select('*')
       .eq('user_id', userId)
-      .single();
-    
-    if (data) {
-      setProfile(data as Profile);
+      .maybeSingle();
+
+    if (error) {
+      console.error('Error fetching profile:', error);
+      setProfile(null);
+      return;
     }
+
+    setProfile((data as Profile) ?? null);
   };
 
   const checkAdminRole = async (userId: string) => {
@@ -73,16 +77,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
+
+        // Clear previously cached user data immediately to prevent showing another user's stats.
+        setProfile(null);
+        setIsAdmin(false);
         
         if (session?.user) {
-          // Defer Supabase calls with setTimeout to avoid deadlock
+          // Defer calls with setTimeout to avoid deadlock
           setTimeout(() => {
             fetchProfile(session.user.id);
             checkAdminRole(session.user.id);
           }, 0);
-        } else {
-          setProfile(null);
-          setIsAdmin(false);
         }
         setLoading(false);
       }
