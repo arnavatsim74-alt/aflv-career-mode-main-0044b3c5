@@ -139,7 +139,7 @@ export default function Auth() {
           <img src="/logo.png" alt="AFLV Logo" className="w-full h-full object-contain" />
         </div>
         <h1 className="text-2xl font-bold text-foreground">Aeroflot Virtual Operations</h1>
-        <p className="text-sm text-muted-foreground">Virtual Airline Operations System</p>
+        <p className="text-sm text-muted-foreground">AFLV Operations System</p>
       </div>
 
       {/* Auth Card */}
@@ -227,7 +227,7 @@ export default function Auth() {
                   <Input
                     id="signup-callsign"
                     type="text"
-                    placeholder="e.g., AFL001"
+                    placeholder="e.g., AFLV001"
                     value={signupCallsign}
                     onChange={(e) => setSignupCallsign(e.target.value.toUpperCase())}
                     className="pl-10 uppercase"
@@ -322,7 +322,7 @@ export default function Auth() {
       </div>
 
       <p className="relative z-10 mt-6 text-sm text-muted-foreground text-center">
-        Powered by React & Lovable Cloud
+        Aeroflot Virtual © 2026
       </p>
     </div>
   );
