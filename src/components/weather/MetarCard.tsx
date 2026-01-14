@@ -318,4 +318,4 @@ export function MetarCard({ icao, label }: MetarCardProps) {
       )}
     </div>
   );
-              }
+            }
