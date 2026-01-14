@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
-import { Plane, BookOpen, Search, Filter, Calendar, Clock } from 'lucide-react';
+import { Plane, BookOpen, Search, Filter, Calendar, Clock, Map } from 'lucide-react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { SectionCard } from '@/components/ui/section-card';
-import { StatusBadge } from '@/components/ui/status-badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { formatCurrency } from '@/lib/currency';
+import { FlightMap } from '@/components/logbook/FlightMap';
 
 interface LogbookEntry {
   id: string;
@@ -158,6 +158,17 @@ export default function Logbook() {
           <p className="text-sm text-muted-foreground">Earnings</p>
         </div>
       </div>
+
+      {/* Flight Map */}
+      {entries.length > 0 && (
+        <SectionCard title="Flight Routes" icon={<Map className="h-5 w-5 text-muted-foreground" />} className="mb-6">
+          <FlightMap flights={entries.map(e => ({
+            departure_airport: e.departure_airport,
+            arrival_airport: e.arrival_airport,
+            flight_number: e.flight_number,
+          }))} />
+        </SectionCard>
+      )}
 
       {/* Filters */}
       <div className="flex flex-col md:flex-row gap-4 mb-6">
