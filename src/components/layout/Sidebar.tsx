@@ -47,7 +47,7 @@ export function Sidebar() {
         <div className="flex items-center gap-2">
           <h1 className="text-lg font-bold text-primary">AFLV OPS</h1>
         </div>
-        <p className="text-xs text-sidebar-foreground/70">Virtual Airline System</p>
+        <p className="text-xs text-sidebar-foreground/70">Aeroflot Virtual vCAREER</p>
       </div>
 
       {/* Navigation */}
