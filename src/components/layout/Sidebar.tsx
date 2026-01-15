@@ -41,7 +41,7 @@ export function Sidebar() {
   const { profile, isAdmin, signOut } = useAuth();
 
   return (
-    <aside className="flex flex-col h-full bg-sidebar text-sidebar-foreground">
+    <aside className="flex flex-col h-full bg-sidebar text-sidebar-foreground relative z-50">
       {/* Brand Header */}
       <div className="p-4 border-b border-sidebar-border">
         <div className="flex items-center gap-2">

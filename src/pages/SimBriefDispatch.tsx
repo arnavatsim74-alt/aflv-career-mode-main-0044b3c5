@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Navigate, useSearchParams, useNavigate } from 'react-router-dom';
-import { Plane, ArrowLeft, ExternalLink, Cloud } from 'lucide-react';
+import { Plane, ArrowLeft, ExternalLink } from 'lucide-react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
-import { MetarCard } from '@/components/weather/MetarCard';
+import { AviationDataViewer } from '@/components/aviation/AviationDataViewer';
 
 export default function SimBriefDispatch() {
   const { user, loading } = useAuth();
@@ -90,16 +90,10 @@ export default function SimBriefDispatch() {
         )}
       </div>
 
-      {/* METAR Weather Section */}
-      <div className="mt-4">
-        <h2 className="text-lg font-semibold text-foreground flex items-center gap-2 mb-3">
-          <Cloud className="h-5 w-5 text-primary" />
-          Weather Information
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <MetarCard icao={origin} label="Departure" />
-          <MetarCard icao={destination} label="Arrival" />
-        </div>
+      {/* Aviation Data Section - Dispatch Driven */}
+      <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <AviationDataViewer icao={origin} label="Departure" />
+        <AviationDataViewer icao={destination} label="Arrival" />
       </div>
 
       <div className="mt-4 flex justify-end">
