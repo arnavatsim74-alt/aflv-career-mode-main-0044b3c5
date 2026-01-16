@@ -84,31 +84,53 @@ export function LogbookPDFExport({ entries, pilotName, callsign, totalEarnings }
     };
   }, [entries]);
 
-  const generatePDF = () => {
+  const generatePDF = async () => {
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
     const primaryColor: [number, number, number] = [59, 130, 246]; // Blue
+    const aeroflotRed: [number, number, number] = [204, 0, 0]; // Aeroflot red
     const textDark: [number, number, number] = [31, 41, 55];
     const textMuted: [number, number, number] = [107, 114, 128];
     
     let yPos = 20;
 
-    // Header
-    doc.setFillColor(...primaryColor);
-    doc.rect(0, 0, pageWidth, 45, 'F');
+    // Header with gradient-like effect
+    doc.setFillColor(...aeroflotRed);
+    doc.rect(0, 0, pageWidth, 50, 'F');
     
+    // Add darker stripe at bottom
+    doc.setFillColor(153, 0, 0);
+    doc.rect(0, 45, pageWidth, 5, 'F');
+
+    // Try to load and add logo
+    try {
+      const logoResponse = await fetch('/logo.png');
+      const logoBlob = await logoResponse.blob();
+      const logoBase64 = await new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.readAsDataURL(logoBlob);
+      });
+      
+      // Add logo to PDF (left side)
+      doc.addImage(logoBase64, 'PNG', 14, 8, 30, 30);
+    } catch (e) {
+      console.log('Could not load logo, continuing without it');
+    }
+
+    // Title text (centered, accounting for logo)
     doc.setTextColor(255, 255, 255);
-    doc.setFontSize(24);
+    doc.setFontSize(22);
     doc.setFont('helvetica', 'bold');
-    doc.text('PILOT LOGBOOK', pageWidth / 2, 20, { align: 'center' });
+    doc.text('PILOT LOGBOOK', pageWidth / 2 + 10, 20, { align: 'center' });
     
-    doc.setFontSize(12);
+    doc.setFontSize(11);
     doc.setFont('helvetica', 'normal');
-    doc.text('OFFICIAL FLIGHT RECORD', pageWidth / 2, 30, { align: 'center' });
+    doc.text('AEROFLOT VIRTUAL • OFFICIAL FLIGHT RECORD', pageWidth / 2 + 10, 30, { align: 'center' });
 
     // Pilot info
     doc.setFontSize(10);
-    doc.text(`${pilotName} | ${callsign}`, pageWidth / 2, 40, { align: 'center' });
+    doc.text(`${pilotName} | ${callsign}`, pageWidth / 2 + 10, 42, { align: 'center' });
 
     yPos = 55;
 
