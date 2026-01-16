@@ -5,6 +5,7 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { AviationDataViewer } from '@/components/aviation/AviationDataViewer';
+import { ATISCard } from '@/components/aviation/ATISCard';
 
 export default function SimBriefDispatch() {
   const { user, loading } = useAuth();
@@ -94,6 +95,12 @@ export default function SimBriefDispatch() {
       <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
         <AviationDataViewer icao={origin} label="Departure" />
         <AviationDataViewer icao={destination} label="Arrival" />
+      </div>
+
+      {/* Infinite Flight ATIS Section */}
+      <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <ATISCard icao={origin} label="Departure" />
+        <ATISCard icao={destination} label="Arrival" />
       </div>
 
       <div className="mt-4 flex justify-end">

@@ -27,22 +27,16 @@ interface LogbookEntry {
   };
 }
 
-interface PilotProfile {
-  name: string;
-  callsign: string;
-  rank: string;
-  base_airport: string | null;
-  total_hours: number;
-  total_flights: number;
-  money: number;
-}
+// PilotProfile interface removed - using simpler props
 
 interface LogbookPDFExportProps {
   entries: LogbookEntry[];
-  profile: PilotProfile | null;
+  pilotName: string;
+  callsign: string;
+  totalEarnings: number;
 }
 
-export function LogbookPDFExport({ entries, profile }: LogbookPDFExportProps) {
+export function LogbookPDFExport({ entries, pilotName, callsign, totalEarnings }: LogbookPDFExportProps) {
   const stats = useMemo(() => {
     const totalFlights = entries.length;
     const totalHours = entries.reduce((acc, e) => acc + Number(e.flight_time_hrs) + (e.flight_time_mins / 60), 0);
@@ -113,10 +107,8 @@ export function LogbookPDFExport({ entries, profile }: LogbookPDFExportProps) {
     doc.text('OFFICIAL FLIGHT RECORD', pageWidth / 2, 30, { align: 'center' });
 
     // Pilot info
-    if (profile) {
-      doc.setFontSize(10);
-      doc.text(`${profile.name} | ${profile.callsign}`, pageWidth / 2, 40, { align: 'center' });
-    }
+    doc.setFontSize(10);
+    doc.text(`${pilotName} | ${callsign}`, pageWidth / 2, 40, { align: 'center' });
 
     yPos = 55;
 
@@ -162,14 +154,9 @@ export function LogbookPDFExport({ entries, profile }: LogbookPDFExportProps) {
 
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
-    if (profile) {
-      doc.text(`Pilot Name: ${profile.name}`, 14, yPos);
-      doc.text(`Rank: ${profile.rank}`, 105, yPos);
-      yPos += 6;
-      doc.text(`Callsign: ${profile.callsign}`, 14, yPos);
-      doc.text(`Base: ${profile.base_airport || 'N/A'}`, 105, yPos);
-      yPos += 6;
-    }
+    doc.text(`Pilot Name: ${pilotName}`, 14, yPos);
+    doc.text(`Callsign: ${callsign}`, 105, yPos);
+    yPos += 6;
     doc.text(`Average Flight Duration: ${stats.avgFlightDuration.toFixed(2)} hours`, 14, yPos);
     doc.text(`Average Earnings/Flight: ${formatCurrency(stats.avgEarnings)}`, 105, yPos);
     
@@ -308,7 +295,7 @@ export function LogbookPDFExport({ entries, profile }: LogbookPDFExportProps) {
 
     // Generate date for filename
     const dateStr = new Date().toISOString().split('T')[0];
-    const filename = `Pilot_Logbook_${profile?.callsign || 'Export'}_${dateStr}.pdf`;
+    const filename = `Pilot_Logbook_${callsign || 'Export'}_${dateStr}.pdf`;
     
     doc.save(filename);
   };

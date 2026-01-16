@@ -1,14 +1,16 @@
 import { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
-import { Plane, BookOpen, Search, Filter, Calendar, Clock, Map } from 'lucide-react';
+import { Plane, BookOpen, Search, Filter, Calendar, Clock, Map, FileDown } from 'lucide-react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { SectionCard } from '@/components/ui/section-card';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { formatCurrency } from '@/lib/currency';
 import { FlightMap } from '@/components/logbook/FlightMap';
+import { LogbookPDFExport } from '@/components/logbook/LogbookPDFExport';
 
 interface LogbookEntry {
   id: string;
@@ -36,6 +38,7 @@ export default function Logbook() {
   const [entries, setEntries] = useState<LogbookEntry[]>([]);
   const [filteredEntries, setFilteredEntries] = useState<LogbookEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [pilotProfile, setPilotProfile] = useState<{ name: string; callsign: string } | null>(null);
   
   // Filters
   const [searchTerm, setSearchTerm] = useState('');
@@ -54,6 +57,17 @@ export default function Logbook() {
 
   const fetchLogbook = async () => {
     setIsLoading(true);
+    
+    // Fetch pilot profile
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('name, callsign')
+      .eq('user_id', user!.id)
+      .single();
+    
+    if (profile) {
+      setPilotProfile(profile);
+    }
     
     const { data } = await supabase
       .from('pireps')
@@ -135,12 +149,22 @@ export default function Logbook() {
 
   return (
     <DashboardLayout>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-          <BookOpen className="h-6 w-6 text-primary" />
-          Pilot Logbook
-        </h1>
-        <p className="text-muted-foreground">Your complete flight history</p>
+      <div className="mb-6 flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+            <BookOpen className="h-6 w-6 text-primary" />
+            Pilot Logbook
+          </h1>
+          <p className="text-muted-foreground">Your complete flight history</p>
+        </div>
+        {entries.length > 0 && pilotProfile && (
+          <LogbookPDFExport
+            entries={entries}
+            pilotName={pilotProfile.name}
+            callsign={pilotProfile.callsign}
+            totalEarnings={totalEarnings}
+          />
+        )}
       </div>
 
       {/* Stats Summary */}
