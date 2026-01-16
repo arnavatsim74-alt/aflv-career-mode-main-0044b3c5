@@ -126,7 +126,7 @@ export function LogbookPDFExport({ entries, pilotName, callsign, totalEarnings }
     
     doc.setFontSize(11);
     doc.setFont('helvetica', 'normal');
-    doc.text('AEROFLOT VIRTUAL • OFFICIAL FLIGHT RECORD', pageWidth / 2 + 10, 30, { align: 'center' });
+    doc.text('AEROFLOT VIRTUAL • OFFICIAL FLIGHT RECORDS', pageWidth / 2 + 10, 30, { align: 'center' });
 
     // Pilot info
     doc.setFontSize(10);
@@ -180,7 +180,7 @@ export function LogbookPDFExport({ entries, pilotName, callsign, totalEarnings }
     doc.text(`Callsign: ${callsign}`, 105, yPos);
     yPos += 6;
     doc.text(`Average Flight Duration: ${stats.avgFlightDuration.toFixed(2)} hours`, 14, yPos);
-    doc.text(`Average Earnings/Flight: ${formatCurrency(stats.avgEarnings)}`, 105, yPos);
+    doc.text(`Average Earnings per Flight: ${formatCurrency(stats.avgEarnings)}`, 105, yPos);
     
     yPos += 15;
 
