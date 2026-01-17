@@ -8,6 +8,7 @@ import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Dispatch from "./pages/Dispatch";
 import SimBriefDispatch from "./pages/SimBriefDispatch";
+import OFPViewer from "./pages/OFPViewer";
 import SubmitPirep from "./pages/SubmitPirep";
 import MyPireps from "./pages/MyPireps";
 import Fleet from "./pages/Fleet";
@@ -36,6 +37,7 @@ const App = () => (
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/dispatch" element={<Dispatch />} />
             <Route path="/simbrief" element={<SimBriefDispatch />} />
+            <Route path="/ofp" element={<OFPViewer />} />
             <Route path="/pirep" element={<SubmitPirep />} />
             <Route path="/my-pireps" element={<MyPireps />} />
             <Route path="/fleet" element={<Fleet />} />

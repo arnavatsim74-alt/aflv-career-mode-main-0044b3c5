@@ -12,6 +12,12 @@ verify_jwt = false
 [functions.infinite-flight-user-stats]
 verify_jwt = false
 
+[functions.infinite-flight-airport]
+verify_jwt = false
+
+[functions.simbrief-ofp]
+verify_jwt = false
+
 [functions.import-route-catalog]
 verify_jwt = false
 
