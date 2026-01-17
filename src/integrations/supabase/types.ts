@@ -385,10 +385,12 @@ export type Database = {
           callsign: string
           created_at: string
           id: string
+          ifc_username: string | null
           is_approved: boolean
           money: number
           name: string
           rank: string
+          simbrief_pid: string | null
           total_flights: number
           total_hours: number
           updated_at: string
@@ -401,10 +403,12 @@ export type Database = {
           callsign: string
           created_at?: string
           id?: string
+          ifc_username?: string | null
           is_approved?: boolean
           money?: number
           name: string
           rank?: string
+          simbrief_pid?: string | null
           total_flights?: number
           total_hours?: number
           updated_at?: string
@@ -417,10 +421,12 @@ export type Database = {
           callsign?: string
           created_at?: string
           id?: string
+          ifc_username?: string | null
           is_approved?: boolean
           money?: number
           name?: string
           rank?: string
+          simbrief_pid?: string | null
           total_flights?: number
           total_hours?: number
           updated_at?: string
@@ -435,10 +441,12 @@ export type Database = {
           callsign: string
           email: string
           id: string
+          ifc_username: string | null
           name: string
           rejection_reason: string | null
           reviewed_at: string | null
           reviewed_by: string | null
+          simbrief_pid: string | null
           status: string
           submitted_at: string
           user_id: string
@@ -448,10 +456,12 @@ export type Database = {
           callsign: string
           email: string
           id?: string
+          ifc_username?: string | null
           name: string
           rejection_reason?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
+          simbrief_pid?: string | null
           status?: string
           submitted_at?: string
           user_id: string
@@ -461,10 +471,12 @@ export type Database = {
           callsign?: string
           email?: string
           id?: string
+          ifc_username?: string | null
           name?: string
           rejection_reason?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
+          simbrief_pid?: string | null
           status?: string
           submitted_at?: string
           user_id?: string

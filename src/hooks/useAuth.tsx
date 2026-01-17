@@ -15,6 +15,8 @@ interface Profile {
   base_airport: string;
   active_aircraft_family: string;
   is_approved: boolean;
+  simbrief_pid: string | null;
+  ifc_username: string | null;
 }
 
 interface AuthContextType {
