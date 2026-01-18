@@ -508,13 +508,24 @@ function DataBox({ label, value }: { label: string; value: string }) {
   );
 }
 
-function FlightCategoryBadge({ category }: { category: string }) {
+function FlightCategoryBadge({ category }: { category?: string | null }) {
   const colors: Record<string, string> = {
     vfr: 'bg-success/20 text-success border-success',
     mvfr: 'bg-info/20 text-info border-info',
     ifr: 'bg-warning/20 text-warning border-warning',
     lifr: 'bg-destructive/20 text-destructive border-destructive',
   };
+
+  // Handle undefined/null category
+  const normalizedCategory = (category || 'unknown').toLowerCase();
+  const colorClass = colors[normalizedCategory] || 'bg-muted text-muted-foreground border-border';
+
+  return (
+    <span className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold uppercase border ${colorClass}`}>
+      {category || 'Unknown'}
+    </span>
+  );
+}
 
   return (
     <span className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold uppercase border ${colors[category] || 'bg-muted text-muted-foreground border-border'}`}>
