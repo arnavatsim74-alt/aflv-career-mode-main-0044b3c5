@@ -433,4 +433,43 @@ export default function FlightBriefing() {
                     <div className="pt-3 border-t border-border">
                       <DataRow label="Block Fuel" value={formatWeight(ofpData.fuel.plan_ramp)} highlight />
                     </div>
-                    <DataRow label="Avg Fuel Fl
+                            </>
+      )}
+    </DashboardLayout>
+  );
+}
+
+function DataRow({ label, value, highlight, muted }: { label: string; value: string; highlight?: boolean; muted?: boolean }) {
+  return (
+    <div className="flex items-center justify-between">
+      <span className="text-muted-foreground text-sm">{label}</span>
+      <span className={`font-semibold ${highlight ? 'text-warning text-lg' : muted ? 'text-muted-foreground text-xs' : 'text-foreground'}`}>
+        {value}
+      </span>
+    </div>
+  );
+}
+
+function DataBox({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="bg-muted/50 rounded-lg p-3">
+      <p className="text-xs text-muted-foreground uppercase mb-1">{label}</p>
+      <p className="font-semibold text-foreground">{value}</p>
+    </div>
+  );
+}
+
+function FlightCategoryBadge({ category }: { category: string }) {
+  const colors: Record<string, string> = {
+    vfr: 'bg-success/20 text-success border-success',
+    mvfr: 'bg-info/20 text-info border-info',
+    ifr: 'bg-warning/20 text-warning border-warning',
+    lifr: 'bg-destructive/20 text-destructive border-destructive',
+  };
+
+  return (
+    <span className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold uppercase border ${colors[category] || 'bg-muted text-muted-foreground border-border'}`}>
+      {category || 'Unknown'}
+    </span>
+  );
+}
