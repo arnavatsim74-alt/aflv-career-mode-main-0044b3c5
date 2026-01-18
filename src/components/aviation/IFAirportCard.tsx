@@ -4,7 +4,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 interface IFAirportCardProps {
   icao: string;
-  label: 'Departure' | 'Arrival';
+  label: 'Departure' | 'Arrival' | 'Alternate';
 }
 
 const surfaceTypes: Record<number, string> = {
