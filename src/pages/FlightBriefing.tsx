@@ -289,7 +289,7 @@ export default function FlightBriefing() {
 
           {/* Tabs Navigation */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid grid-cols-4 lg:grid-cols-8 mb-6 bg-muted/50">
+            <TabsList className="grid grid-cols-4 lg:grid-cols-8 mb-6 bg-muted/50 h-auto">
               <TabsTrigger value="overview" className="text-xs">Overview</TabsTrigger>
               <TabsTrigger value="map" className="text-xs">Map</TabsTrigger>
               <TabsTrigger value="route" className="text-xs">Route</TabsTrigger>
