@@ -33,6 +33,9 @@ const frequencyTypes: Record<number, string> = {
 export function IFAirportCard({ icao, label }: IFAirportCardProps) {
   const { airportData, loading, error } = useInfiniteFlightAirport(icao);
 
+  // Add console logging for debugging
+  console.log(`IFAirportCard ${label}:`, { icao, loading, error, airportData });
+
   if (loading) {
     return (
       <div className="bg-card rounded-xl border border-border p-4">
@@ -60,6 +63,20 @@ export function IFAirportCard({ icao, label }: IFAirportCardProps) {
     );
   }
 
+  // Safely access nested properties
+  const airportName = airportData?.name || 'Unknown Airport';
+  const airportCity = airportData?.city || '';
+  const airportState = airportData?.state || '';
+  const airportCountry = airportData?.country || '';
+  const airportICAO = airportData?.icao || icao;
+  const airportIATA = airportData?.iata || '';
+  const elevation = airportData?.elevation ? Math.round(airportData.elevation) : 0;
+  const magneticVariation = airportData?.magneticVariation || 0;
+  const latitude = airportData?.latitude || 0;
+  const longitude = airportData?.longitude || 0;
+  const runways = airportData?.runways || [];
+  const frequencies = airportData?.frequencies || [];
+
   return (
     <div className="bg-card rounded-xl border border-border p-4">
       <div className="flex items-center gap-2 mb-4">
@@ -70,11 +87,11 @@ export function IFAirportCard({ icao, label }: IFAirportCardProps) {
       <div className="space-y-4">
         {/* Airport Name */}
         <div>
-          <h4 className="text-xl font-bold text-foreground uppercase">{airportData.name}</h4>
+          <h4 className="text-xl font-bold text-foreground uppercase">{airportName}</h4>
           <p className="text-sm text-muted-foreground">
-            {airportData.city && `${airportData.city}, `}
-            {airportData.state && `${airportData.state}, `}
-            {airportData.country}
+            {airportCity && `${airportCity}, `}
+            {airportState && `${airportState}, `}
+            {airportCountry}
           </p>
         </div>
 
@@ -85,14 +102,14 @@ export function IFAirportCard({ icao, label }: IFAirportCardProps) {
               <Building2 className="h-3 w-3" /> ICAO / IATA
             </p>
             <p className="font-semibold text-foreground">
-              {airportData.icao} {airportData.iata && `/ ${airportData.iata}`}
+              {airportICAO} {airportIATA && `/ ${airportIATA}`}
             </p>
           </div>
           <div>
             <p className="text-xs text-muted-foreground flex items-center gap-1 mb-1">
               <MapPin className="h-3 w-3" /> Elevation
             </p>
-            <p className="font-semibold text-foreground">{Math.round(airportData.elevation)} ft</p>
+            <p className="font-semibold text-foreground">{elevation} ft</p>
           </div>
         </div>
 
@@ -102,7 +119,7 @@ export function IFAirportCard({ icao, label }: IFAirportCardProps) {
               <Navigation className="h-3 w-3" /> Mag Var
             </p>
             <p className="font-semibold text-foreground">
-              {airportData.magneticVariation > 0 ? 'E' : 'W'}{Math.abs(airportData.magneticVariation).toFixed(1)}°
+              {magneticVariation > 0 ? 'E' : 'W'}{Math.abs(magneticVariation).toFixed(1)}°
             </p>
           </div>
           <div>
@@ -110,47 +127,68 @@ export function IFAirportCard({ icao, label }: IFAirportCardProps) {
               <MapPin className="h-3 w-3" /> Coordinates
             </p>
             <p className="font-semibold text-foreground text-xs">
-              {airportData.latitude.toFixed(4)}°, {airportData.longitude.toFixed(4)}°
+              {latitude.toFixed(4)}°, {longitude.toFixed(4)}°
             </p>
           </div>
         </div>
 
         {/* Runways */}
-        {airportData.runways && airportData.runways.length > 0 && (
+        {runways.length > 0 && (
           <div className="pt-2 border-t border-border">
             <p className="text-sm text-muted-foreground flex items-center gap-1 mb-2">
-              <Plane className="h-4 w-4" /> Runways ({airportData.runways.length})
+              <Plane className="h-4 w-4" /> Runways ({runways.length})
             </p>
             <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto">
-              {airportData.runways.slice(0, 6).map((runway, idx) => (
-                <div key={idx} className="bg-muted/50 rounded-lg p-2 text-xs">
-                  <p className="font-semibold text-primary">{runway.name}</p>
-                  <p className="text-muted-foreground">
-                    {Math.round(runway.length)}ft x {Math.round(runway.width)}ft
-                  </p>
-                  <p className="text-muted-foreground">
-                    {surfaceTypes[runway.surface] || 'Unknown'} 
-                    {runway.ils && ' • ILS'}
-                  </p>
-                </div>
-              ))}
+              {runways.slice(0, 6).map((runway, idx) => {
+                // Safe access to runway properties
+                const runwayName = runway?.name || `RWY ${idx + 1}`;
+                const runwayLength = runway?.length ? Math.round(runway.length) : 0;
+                const runwayWidth = runway?.width ? Math.round(runway.width) : 0;
+                const runwaySurface = runway?.surface !== undefined 
+                  ? (surfaceTypes[runway.surface] || 'Unknown') 
+                  : 'Unknown';
+                const hasILS = runway?.ils || false;
+
+                return (
+                  <div key={idx} className="bg-muted/50 rounded-lg p-2 text-xs">
+                    <p className="font-semibold text-primary">{runwayName}</p>
+                    <p className="text-muted-foreground">
+                      {runwayLength}ft x {runwayWidth}ft
+                    </p>
+                    <p className="text-muted-foreground">
+                      {runwaySurface}
+                      {hasILS && ' • ILS'}
+                    </p>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
 
         {/* Frequencies */}
-        {airportData.frequencies && airportData.frequencies.length > 0 && (
+        {frequencies.length > 0 && (
           <div className="pt-2 border-t border-border">
             <p className="text-xs text-muted-foreground flex items-center gap-1 mb-2">
               <Radio className="h-3 w-3" /> Frequencies
             </p>
             <div className="flex flex-wrap gap-2">
-              {airportData.frequencies.slice(0, 8).map((freq, idx) => (
-                <span key={idx} className="bg-muted/50 px-2 py-1 rounded text-xs">
-                  <span className="text-warning font-semibold">{frequencyTypes[freq.type] || 'COM'}</span>
-                  <span className="text-foreground ml-1">{(freq.frequency / 1000).toFixed(3)}</span>
-                </span>
-              ))}
+              {frequencies.slice(0, 8).map((freq, idx) => {
+                // Safe access to frequency properties
+                const freqType = freq?.type !== undefined 
+                  ? (frequencyTypes[freq.type] || 'COM') 
+                  : 'COM';
+                const freqValue = freq?.frequency 
+                  ? (freq.frequency / 1000).toFixed(3) 
+                  : '000.000';
+
+                return (
+                  <span key={idx} className="bg-muted/50 px-2 py-1 rounded text-xs">
+                    <span className="text-warning font-semibold">{freqType}</span>
+                    <span className="text-foreground ml-1">{freqValue}</span>
+                  </span>
+                );
+              })}
             </div>
           </div>
         )}
