@@ -43,7 +43,8 @@ export function ATISCard({ icao, label }: ATISCardProps) {
     );
   }
 
-  const hasATIS = data?.atis;
+  // Check if ATIS data exists and has actual message content
+  const hasATIS = data?.atis?.atis && data.atis.atis.trim().length > 0;
 
   return (
     <div className="bg-card border border-border rounded-xl p-4">
@@ -66,34 +67,58 @@ export function ATISCard({ icao, label }: ATISCardProps) {
       {hasATIS ? (
         <div className="space-y-3">
           {/* ATIS Message */}
-          <div className="bg-muted/50 rounded-lg p-3 font-mono text-sm text-card-foreground leading-relaxed">
-            {data.atis.atis}
+          <div className="bg-slate-900/50 rounded-lg p-3 font-mono text-sm text-slate-100 leading-relaxed whitespace-pre-wrap border border-slate-700/50">
+            {data.atis.atis || '[Empty ATIS message]'}
           </div>
-
-          {/* Session Info */}
-          {data.session && (
-            <div className="flex items-center gap-4 text-xs text-muted-foreground">
+          
+          {/* Session and Frequency Info */}
+          <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
+            {data.session?.name && (
               <span className="flex items-center gap-1">
                 <span className="font-medium">Server:</span>
                 {data.session.name}
               </span>
+            )}
+            {data.atis.frequencyId && (
               <span className="flex items-center gap-1">
                 <span className="font-medium">Frequency ID:</span>
                 {data.atis.frequencyId}
               </span>
-            </div>
-          )}
+            )}
+            {data.atis.airportIcao && (
+              <span className="flex items-center gap-1">
+                <span className="font-medium">ICAO:</span>
+                {data.atis.airportIcao}
+              </span>
+            )}
+          </div>
         </div>
       ) : (
         <div className="text-center py-4">
           <Radio className="h-8 w-8 mx-auto text-muted-foreground/50 mb-2" />
           <p className="text-sm text-muted-foreground">
-            {data?.message || 'No ATIS available'}
+            {data?.message || `No ATIS available for ${icao}`}
           </p>
           {data?.sessions && data.sessions.length > 0 && (
             <p className="text-xs text-muted-foreground/70 mt-2">
               Active servers: {data.sessions.map(s => s.name).join(', ')}
             </p>
+          )}
+          {data?.error && (
+            <p className="text-xs text-destructive/70 mt-2">
+              {data.error}
+            </p>
+          )}
+          {/* Debug info - remove in production */}
+          {data && (
+            <details className="mt-3 text-left">
+              <summary className="text-xs text-muted-foreground/50 cursor-pointer hover:text-muted-foreground">
+                Debug Data
+              </summary>
+              <pre className="text-xs bg-muted/30 p-2 rounded mt-2 overflow-auto max-h-40 text-left">
+                {JSON.stringify(data, null, 2)}
+              </pre>
+            </details>
           )}
         </div>
       )}
