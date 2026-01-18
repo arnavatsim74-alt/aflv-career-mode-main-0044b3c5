@@ -44,7 +44,8 @@ export function ATISCard({ icao, label }: ATISCardProps) {
   }
 
   // Check if ATIS data exists and has actual message content
-  const hasATIS = data?.atis?.atis && data.atis.atis.trim().length > 0;
+  // The response structure is: { atis: "string", session: {...}, airport: "ICAO" }
+  const hasATIS = data?.atis && typeof data.atis === 'string' && data.atis.trim().length > 0;
 
   return (
     <div className="bg-card border border-border rounded-xl p-4">
@@ -68,10 +69,10 @@ export function ATISCard({ icao, label }: ATISCardProps) {
         <div className="space-y-3">
           {/* ATIS Message */}
           <div className="bg-slate-900/50 rounded-lg p-3 font-mono text-sm text-slate-100 leading-relaxed whitespace-pre-wrap border border-slate-700/50">
-            {data.atis.atis || '[Empty ATIS message]'}
+            {data.atis}
           </div>
           
-          {/* Session and Frequency Info */}
+          {/* Session and Airport Info */}
           <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
             {data.session?.name && (
               <span className="flex items-center gap-1">
@@ -79,16 +80,10 @@ export function ATISCard({ icao, label }: ATISCardProps) {
                 {data.session.name}
               </span>
             )}
-            {data.atis.frequencyId && (
+            {data.airport && (
               <span className="flex items-center gap-1">
-                <span className="font-medium">Frequency ID:</span>
-                {data.atis.frequencyId}
-              </span>
-            )}
-            {data.atis.airportIcao && (
-              <span className="flex items-center gap-1">
-                <span className="font-medium">ICAO:</span>
-                {data.atis.airportIcao}
+                <span className="font-medium">Airport:</span>
+                {data.airport}
               </span>
             )}
           </div>
