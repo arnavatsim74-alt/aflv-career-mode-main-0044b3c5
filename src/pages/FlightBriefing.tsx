@@ -1,55 +1,53 @@
-import { useEffect, useState } from 'react';
-import { Navigate, useSearchParams, useNavigate } from 'react-router-dom';
-import { Plane, ArrowLeft, RefreshCw, Map, FileText, ExternalLink, Info } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Navigate, useNavigate } from 'react-router-dom';
+import { Plane, ArrowLeft, RefreshCw, Map, FileText, ExternalLink, Search, Send, Info, Download } from 'lucide-react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/hooks/useAuth';
 import { useSimBriefOFP, OFPData } from '@/hooks/useSimBriefOFP';
 import { IFAirportCard } from '@/components/aviation/IFAirportCard';
 import { ATISCard } from '@/components/aviation/ATISCard';
 import { Skeleton } from '@/components/ui/skeleton';
+import { supabase } from '@/integrations/supabase/client';
 
-export default function SimBriefDispatch() {
+const AIRCRAFT_TYPES = [
+  { code: 'A20N', name: 'Airbus A320neo' },
+  { code: 'A21N', name: 'Airbus A321neo' },
+  { code: 'A320', name: 'Airbus A320' },
+  { code: 'A321', name: 'Airbus A321' },
+  { code: 'A332', name: 'Airbus A330-200' },
+  { code: 'A333', name: 'Airbus A330-300' },
+  { code: 'A339', name: 'Airbus A330-900neo' },
+  { code: 'A359', name: 'Airbus A350-900' },
+  { code: 'A35K', name: 'Airbus A350-1000' },
+  { code: 'B738', name: 'Boeing 737-800' },
+  { code: 'B739', name: 'Boeing 737-900' },
+  { code: 'B77L', name: 'Boeing 777-200LR' },
+  { code: 'B77W', name: 'Boeing 777-300ER' },
+  { code: 'B78X', name: 'Boeing 787-10' },
+  { code: 'B789', name: 'Boeing 787-9' },
+  { code: 'B788', name: 'Boeing 787-8' },
+];
+
+export default function FlightBriefing() {
   const { user, profile, loading: authLoading } = useAuth();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
   const { ofpData, loading, error, fetchOFP, generateOFP } = useSimBriefOFP();
   const [activeTab, setActiveTab] = useState('overview');
-  const [isGenerating, setIsGenerating] = useState(false);
-
-  const origin = searchParams.get('orig') || 'UUEE';
-  const destination = searchParams.get('dest') || 'UUEE';
-  const flightNumber = searchParams.get('fltnum') || '1234';
-  const aircraftType = searchParams.get('type') || 'A320';
-  const legId = searchParams.get('legId') || '';
-
+  
+  // Manual input form
+  const [origin, setOrigin] = useState('');
+  const [destination, setDestination] = useState('');
+  const [aircraftType, setAircraftType] = useState('A320');
+  const [flightNumber, setFlightNumber] = useState('');
+  const [passengers, setPassengers] = useState('');
+  const [cargo, setCargo] = useState('');
+  
   const simbriefPid = profile?.simbrief_pid;
-
-  useEffect(() => {
-    const initializeOFP = async () => {
-      if (!simbriefPid || ofpData || loading || isGenerating) return;
-
-      setIsGenerating(true);
-      
-      // Generate OFP with the dispatch parameters
-      await generateOFP({
-        airline: 'AFL',
-        fltnum: flightNumber,
-        orig: origin,
-        dest: destination,
-        type: aircraftType,
-      });
-
-      // Wait for SimBrief to process then fetch
-      setTimeout(async () => {
-        await fetchOFP(simbriefPid);
-        setIsGenerating(false);
-      }, 4000);
-    };
-
-    initializeOFP();
-  }, [simbriefPid, origin, destination, flightNumber, aircraftType]);
 
   if (authLoading) {
     return (
@@ -65,27 +63,28 @@ export default function SimBriefDispatch() {
     return <Navigate to="/auth" replace />;
   }
 
-  if (!simbriefPid) {
-    return (
-      <DashboardLayout>
-        <div className="flex flex-col items-center justify-center h-64 gap-4">
-          <Info className="h-12 w-12 text-muted-foreground" />
-          <h2 className="text-lg font-semibold">SimBrief PID Required</h2>
-          <p className="text-muted-foreground text-center max-w-md">
-            Please add your SimBrief Pilot ID in your profile settings to use dispatch features.
-          </p>
-          <Button variant="outline" onClick={() => navigate('/dispatch')}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Dispatch
-          </Button>
-        </div>
-      </DashboardLayout>
-    );
-  }
+  const handleFetchRecentFPL = async () => {
+    if (!simbriefPid) return;
+    await fetchOFP(simbriefPid);
+  };
 
-  const handleRefresh = async () => {
+  const handleGenerateOFP = async () => {
+    if (!origin || !destination || !aircraftType) return;
+    
+    await generateOFP({
+      airline: 'AFL',
+      fltnum: flightNumber || '001',
+      orig: origin.toUpperCase(),
+      dest: destination.toUpperCase(),
+      type: aircraftType,
+      pax: passengers ? parseInt(passengers) : undefined,
+      cargo: cargo ? parseInt(cargo) : undefined,
+    });
+
+    // After generation, fetch the latest OFP
     if (simbriefPid) {
-      await fetchOFP(simbriefPid);
+      // Wait a bit for SimBrief to process
+      setTimeout(() => fetchOFP(simbriefPid), 3000);
     }
   };
 
@@ -121,49 +120,151 @@ export default function SimBriefDispatch() {
           </Button>
           <div>
             <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
-              <Plane className="h-5 w-5" />
-              Flight Planning: {origin} → {destination}
+              <FileText className="h-5 w-5" />
+              Flight Briefing
             </h1>
             <p className="text-sm text-muted-foreground">
-              AFL{flightNumber} • {aircraftType}
+              Create or fetch your flight plan
             </p>
           </div>
         </div>
-        <Button variant="outline" size="sm" onClick={handleRefresh} disabled={loading || isGenerating} className="gap-2">
-          <RefreshCw className={`h-4 w-4 ${loading || isGenerating ? 'animate-spin' : ''}`} />
-          Refresh OFP
-        </Button>
+        {simbriefPid && (
+          <Button variant="outline" size="sm" onClick={handleFetchRecentFPL} disabled={loading} className="gap-2">
+            <Download className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            Fetch Recent FPL
+          </Button>
+        )}
       </div>
 
-      {(loading || isGenerating) && (
-        <div className="space-y-4">
-          <div className="bg-card border border-border rounded-xl p-6">
-            <div className="flex items-center gap-3">
-              <Plane className="h-6 w-6 animate-pulse text-warning" />
-              <div>
-                <p className="font-semibold text-foreground">Generating Flight Plan...</p>
-                <p className="text-sm text-muted-foreground">SimBrief is calculating your optimal route</p>
+      {/* Manual Input Form */}
+      {!ofpData && (
+        <div className="bg-card border border-border rounded-xl p-6 mb-6">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-1 h-6 bg-warning rounded-full" />
+            <h3 className="text-lg font-semibold text-foreground">Flight Plan Details</h3>
+          </div>
+          
+          {!simbriefPid && (
+            <div className="bg-warning/10 border border-warning/30 rounded-lg p-4 mb-6">
+              <div className="flex items-center gap-2 text-warning">
+                <Info className="h-4 w-4" />
+                <p className="text-sm">Add your SimBrief PID in your profile to use flight planning features.</p>
               </div>
             </div>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+            <div className="space-y-2">
+              <Label htmlFor="origin">Origin (ICAO) *</Label>
+              <Input
+                id="origin"
+                placeholder="e.g., UUEE"
+                value={origin}
+                onChange={(e) => setOrigin(e.target.value.toUpperCase())}
+                maxLength={4}
+                className="uppercase"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="destination">Destination (ICAO) *</Label>
+              <Input
+                id="destination"
+                placeholder="e.g., LFPG"
+                value={destination}
+                onChange={(e) => setDestination(e.target.value.toUpperCase())}
+                maxLength={4}
+                className="uppercase"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="aircraft">Aircraft Type *</Label>
+              <Select value={aircraftType} onValueChange={setAircraftType}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select aircraft" />
+                </SelectTrigger>
+                <SelectContent>
+                  {AIRCRAFT_TYPES.map((ac) => (
+                    <SelectItem key={ac.code} value={ac.code}>
+                      {ac.code} - {ac.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="flightNumber">Flight Number</Label>
+              <Input
+                id="flightNumber"
+                placeholder="e.g., 1234"
+                value={flightNumber}
+                onChange={(e) => setFlightNumber(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="passengers">Passengers</Label>
+              <Input
+                id="passengers"
+                type="number"
+                placeholder="e.g., 150"
+                value={passengers}
+                onChange={(e) => setPassengers(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="cargo">Cargo (kg)</Label>
+              <Input
+                id="cargo"
+                type="number"
+                placeholder="e.g., 5000"
+                value={cargo}
+                onChange={(e) => setCargo(e.target.value)}
+              />
+            </div>
           </div>
+
+          <div className="flex flex-wrap gap-3">
+            <Button 
+              onClick={handleGenerateOFP} 
+              disabled={!origin || !destination || !simbriefPid || loading}
+              className="gap-2"
+            >
+              <Send className="h-4 w-4" />
+              Generate OFP
+            </Button>
+            {simbriefPid && (
+              <Button variant="outline" onClick={handleFetchRecentFPL} disabled={loading} className="gap-2">
+                <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                Fetch Latest OFP
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {loading && (
+        <div className="space-y-4">
           <Skeleton className="h-32 w-full" />
           <Skeleton className="h-64 w-full" />
         </div>
       )}
 
-      {error && !loading && !isGenerating && (
+      {error && (
         <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-4 text-destructive mb-6">
           {error}
-          <Button variant="outline" size="sm" onClick={handleRefresh} className="ml-4">
-            Retry
-          </Button>
         </div>
       )}
 
-      {ofpData && !loading && !isGenerating && (
+      {ofpData && (
         <>
           {/* Flight Summary Header */}
           <div className="bg-gradient-to-r from-card to-muted/50 border border-border rounded-xl p-6 mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-foreground">Flight Plan Loaded</h3>
+              <Button variant="ghost" size="sm" onClick={handleFetchRecentFPL} className="gap-2">
+                <RefreshCw className="h-4 w-4" />
+                Refresh
+              </Button>
+            </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
               <div className="bg-muted/50 rounded-lg p-3">
                 <p className="text-xs text-muted-foreground uppercase">Flight</p>
@@ -180,7 +281,7 @@ export default function SimBriefDispatch() {
                 <p className="font-bold text-lg text-foreground">{ofpData.aircraft.icaocode}</p>
               </div>
               <div className="bg-muted/50 rounded-lg p-3">
-                <p className="text-xs text-muted-foreground uppercase">Flight Time</p>
+                <p className="text-xs text-muted-foreground uppercase">Time</p>
                 <p className="font-bold text-lg text-foreground">{formatTime(ofpData.times.est_time_enroute)}</p>
               </div>
             </div>
@@ -495,7 +596,7 @@ export default function SimBriefDispatch() {
               <ArrowLeft className="h-4 w-4 mr-2" />
               Return to Dispatch
             </Button>
-            <Button onClick={() => navigate(`/pirep?leg=${legId}`)} className="gap-2">
+            <Button onClick={() => navigate('/pirep')} className="gap-2">
               <Plane className="h-4 w-4" />
               Proceed to File PIREP
             </Button>
