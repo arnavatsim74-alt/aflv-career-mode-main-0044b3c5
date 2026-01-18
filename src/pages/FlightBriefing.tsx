@@ -433,7 +433,175 @@ export default function FlightBriefing() {
                     <div className="pt-3 border-t border-border">
                       <DataRow label="Block Fuel" value={formatWeight(ofpData.fuel.plan_ramp)} highlight />
                     </div>
-                            </>
+                    <DataRow label="Avg Fuel Flow" value={`${ofpData.fuel.avg_fuel_flow} kg/hr`} />
+                  </div>
+                </div>
+
+                {/* Weights */}
+                <div className="bg-card border border-border rounded-xl p-4">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="w-1 h-6 bg-warning rounded-full" />
+                    <h3 className="text-lg font-semibold text-foreground">Weight Planning</h3>
+                  </div>
+                  <div className="space-y-3">
+                    <DataRow label="OEW" value={formatWeight(ofpData.weights.oew)} />
+                    <DataRow label="Passengers" value={ofpData.weights.pax_count || 'N/A'} />
+                    <DataRow label="Cargo" value={formatWeight(ofpData.weights.cargo)} />
+                    <DataRow label="Payload" value={formatWeight(ofpData.weights.payload)} />
+                    <div className="pt-3 border-t border-border">
+                      <DataRow label="Est ZFW" value={formatWeight(ofpData.weights.est_zfw)} />
+                      <DataRow label="Max ZFW" value={formatWeight(ofpData.weights.max_zfw)} muted />
+                    </div>
+                    <div className="pt-3 border-t border-border">
+                      <DataRow label="Est TOW" value={formatWeight(ofpData.weights.est_tow)} highlight />
+                      <DataRow label="Max TOW" value={formatWeight(ofpData.weights.max_tow)} muted />
+                    </div>
+                    <div className="pt-3 border-t border-border">
+                      <DataRow label="Est LDW" value={formatWeight(ofpData.weights.est_ldw)} />
+                      <DataRow label="Max LDW" value={formatWeight(ofpData.weights.max_ldw)} muted />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </TabsContent>
+
+            {/* Weather Tab */}
+            <TabsContent value="weather" className="space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Departure Weather */}
+                <div className="bg-card border border-border rounded-xl p-4">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="w-1 h-6 bg-warning rounded-full" />
+                    <h3 className="text-lg font-semibold text-foreground">Departure Weather - {ofpData.origin.icao_code}</h3>
+                  </div>
+                  <div className="space-y-4">
+                    <div>
+                      <p className="text-xs text-warning font-semibold mb-1">METAR</p>
+                      <p className="font-mono text-sm text-foreground bg-muted/50 p-2 rounded break-all">
+                        {ofpData.origin.metar || 'No METAR data'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-warning font-semibold mb-1">TAF</p>
+                      <p className="font-mono text-xs text-foreground bg-muted/50 p-2 rounded whitespace-pre-wrap">
+                        {ofpData.origin.taf || 'No TAF data'}
+                      </p>
+                    </div>
+                    <FlightCategoryBadge category={ofpData.origin.metar_category} />
+                  </div>
+                </div>
+
+                {/* Destination Weather */}
+                <div className="bg-card border border-border rounded-xl p-4">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="w-1 h-6 bg-warning rounded-full" />
+                    <h3 className="text-lg font-semibold text-foreground">Arrival Weather - {ofpData.destination.icao_code}</h3>
+                  </div>
+                  <div className="space-y-4">
+                    <div>
+                      <p className="text-xs text-warning font-semibold mb-1">METAR</p>
+                      <p className="font-mono text-sm text-foreground bg-muted/50 p-2 rounded break-all">
+                        {ofpData.destination.metar || 'No METAR data'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-warning font-semibold mb-1">TAF</p>
+                      <p className="font-mono text-xs text-foreground bg-muted/50 p-2 rounded whitespace-pre-wrap">
+                        {ofpData.destination.taf || 'No TAF data'}
+                      </p>
+                    </div>
+                    <FlightCategoryBadge category={ofpData.destination.metar_category} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Alternate Weather */}
+              {ofpData.alternate.icao_code && (
+                <div className="bg-card border border-border rounded-xl p-4">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="w-1 h-6 bg-warning rounded-full" />
+                    <h3 className="text-lg font-semibold text-foreground">Alternate Weather - {ofpData.alternate.icao_code}</h3>
+                  </div>
+                  <div>
+                    <p className="text-xs text-warning font-semibold mb-1">METAR</p>
+                    <p className="font-mono text-sm text-foreground bg-muted/50 p-2 rounded break-all">
+                      {ofpData.alternate.metar || 'No METAR data'}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </TabsContent>
+
+            {/* Navigation Log Tab */}
+            <TabsContent value="navlog" className="space-y-6">
+              <div className="bg-card border border-border rounded-xl p-4 overflow-x-auto">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-1 h-6 bg-warning rounded-full" />
+                  <h3 className="text-lg font-semibold text-foreground">Navigation Log</h3>
+                </div>
+                <table className="w-full min-w-[800px]">
+                  <thead>
+                    <tr className="border-b border-border text-warning text-xs uppercase">
+                      <th className="text-left p-2">Waypoint</th>
+                      <th className="text-left p-2">Airway</th>
+                      <th className="text-left p-2">Altitude</th>
+                      <th className="text-left p-2">Wind</th>
+                      <th className="text-left p-2">Distance</th>
+                      <th className="text-left p-2">ETE</th>
+                      <th className="text-left p-2">Fuel Rem</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {ofpData.navlog.map((fix, idx) => (
+                      <tr key={idx} className="border-b border-border/50 hover:bg-muted/30">
+                        <td className="p-2 font-semibold text-foreground">{fix.ident}</td>
+                        <td className="p-2 text-muted-foreground">{fix.via_airway || 'DCT'}</td>
+                        <td className="p-2 text-foreground">FL{Math.round(parseInt(fix.altitude_feet || '0') / 100)}</td>
+                        <td className="p-2 text-muted-foreground">{fix.wind_dir}/{fix.wind_spd}</td>
+                        <td className="p-2 text-foreground">{fix.distance} NM</td>
+                        <td className="p-2 text-muted-foreground">{formatLegTime(fix.time_total)}</td>
+                        <td className="p-2 text-foreground">{parseInt(fix.fuel_plan_onboard || '0').toLocaleString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </TabsContent>
+
+            {/* Airports Tab */}
+            <TabsContent value="airports" className="space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <IFAirportCard icao={ofpData.origin.icao_code} label="Departure" />
+                <IFAirportCard icao={ofpData.destination.icao_code} label="Arrival" />
+              </div>
+              {ofpData.alternate.icao_code && (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <IFAirportCard icao={ofpData.alternate.icao_code} label="Alternate" />
+                </div>
+              )}
+            </TabsContent>
+
+            {/* Live ATIS Tab */}
+            <TabsContent value="atis" className="space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <ATISCard icao={ofpData.origin.icao_code} label="Departure" />
+                <ATISCard icao={ofpData.destination.icao_code} label="Arrival" />
+              </div>
+            </TabsContent>
+          </Tabs>
+
+          {/* Action Buttons */}
+          <div className="mt-6 flex flex-wrap gap-4 justify-between items-center">
+            <Button variant="outline" onClick={() => navigate('/dispatch')}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Return to Dispatch
+            </Button>
+            <Button onClick={() => navigate('/pirep')} className="gap-2">
+              <Plane className="h-4 w-4" />
+              Proceed to File PIREP
+            </Button>
+          </div>
+        </>
       )}
     </DashboardLayout>
   );
