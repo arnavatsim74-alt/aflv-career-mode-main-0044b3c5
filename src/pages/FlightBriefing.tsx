@@ -11,6 +11,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useSimBriefOFP, OFPData } from '@/hooks/useSimBriefOFP';
 import { IFAirportCard } from '@/components/aviation/IFAirportCard';
 import { ATISCard } from '@/components/aviation/ATISCard';
+import { MetarWeatherCard } from '@/components/aviation/MetarWeatherCard';
 import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -468,67 +469,51 @@ export default function FlightBriefing() {
             {/* Weather Tab */}
             <TabsContent value="weather" className="space-y-6">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Departure Weather */}
+                <MetarWeatherCard 
+                  icao={ofpData.origin.icao_code}
+                  label="Departure"
+                  metar={ofpData.origin.metar}
+                  runwayHeading={ofpData.origin.plan_rwy ? parseInt(ofpData.origin.plan_rwy.replace(/[LRC]/g, '')) * 10 : 0}
+                />
+                <MetarWeatherCard 
+                  icao={ofpData.destination.icao_code}
+                  label="Arrival"
+                  metar={ofpData.destination.metar}
+                  runwayHeading={ofpData.destination.plan_rwy ? parseInt(ofpData.destination.plan_rwy.replace(/[LRC]/g, '')) * 10 : 0}
+                />
+              </div>
+              
+              {/* TAF Section */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="bg-card border border-border rounded-xl p-4">
-                  <div className="flex items-center gap-2 mb-4">
+                  <div className="flex items-center gap-2 mb-3">
                     <div className="w-1 h-6 bg-warning rounded-full" />
-                    <h3 className="text-lg font-semibold text-foreground">Departure Weather - {ofpData.origin.icao_code}</h3>
-                  </div>
-                  <div className="space-y-4">
-                    <div>
-                      <p className="text-xs text-warning font-semibold mb-1">METAR</p>
-                      <p className="font-mono text-sm text-foreground bg-muted/50 p-2 rounded break-all">
-                        {ofpData.origin.metar || 'No METAR data'}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-warning font-semibold mb-1">TAF</p>
-                      <p className="font-mono text-xs text-foreground bg-muted/50 p-2 rounded whitespace-pre-wrap">
-                        {ofpData.origin.taf || 'No TAF data'}
-                      </p>
-                    </div>
+                    <h3 className="text-lg font-semibold text-foreground">Departure TAF - {ofpData.origin.icao_code}</h3>
                     <FlightCategoryBadge category={ofpData.origin.metar_category} />
                   </div>
+                  <p className="font-mono text-xs text-foreground bg-muted/50 p-3 rounded whitespace-pre-wrap">
+                    {ofpData.origin.taf || 'No TAF data'}
+                  </p>
                 </div>
-
-                {/* Destination Weather */}
                 <div className="bg-card border border-border rounded-xl p-4">
-                  <div className="flex items-center gap-2 mb-4">
+                  <div className="flex items-center gap-2 mb-3">
                     <div className="w-1 h-6 bg-warning rounded-full" />
-                    <h3 className="text-lg font-semibold text-foreground">Arrival Weather - {ofpData.destination.icao_code}</h3>
-                  </div>
-                  <div className="space-y-4">
-                    <div>
-                      <p className="text-xs text-warning font-semibold mb-1">METAR</p>
-                      <p className="font-mono text-sm text-foreground bg-muted/50 p-2 rounded break-all">
-                        {ofpData.destination.metar || 'No METAR data'}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-warning font-semibold mb-1">TAF</p>
-                      <p className="font-mono text-xs text-foreground bg-muted/50 p-2 rounded whitespace-pre-wrap">
-                        {ofpData.destination.taf || 'No TAF data'}
-                      </p>
-                    </div>
+                    <h3 className="text-lg font-semibold text-foreground">Arrival TAF - {ofpData.destination.icao_code}</h3>
                     <FlightCategoryBadge category={ofpData.destination.metar_category} />
                   </div>
+                  <p className="font-mono text-xs text-foreground bg-muted/50 p-3 rounded whitespace-pre-wrap">
+                    {ofpData.destination.taf || 'No TAF data'}
+                  </p>
                 </div>
               </div>
 
               {/* Alternate Weather */}
               {ofpData.alternate.icao_code && (
-                <div className="bg-card border border-border rounded-xl p-4">
-                  <div className="flex items-center gap-2 mb-4">
-                    <div className="w-1 h-6 bg-warning rounded-full" />
-                    <h3 className="text-lg font-semibold text-foreground">Alternate Weather - {ofpData.alternate.icao_code}</h3>
-                  </div>
-                  <div>
-                    <p className="text-xs text-warning font-semibold mb-1">METAR</p>
-                    <p className="font-mono text-sm text-foreground bg-muted/50 p-2 rounded break-all">
-                      {ofpData.alternate.metar || 'No METAR data'}
-                    </p>
-                  </div>
-                </div>
+                <MetarWeatherCard 
+                  icao={ofpData.alternate.icao_code}
+                  label="Alternate"
+                  metar={ofpData.alternate.metar}
+                />
               )}
             </TabsContent>
 
