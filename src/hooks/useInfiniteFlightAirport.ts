@@ -7,7 +7,7 @@ export interface IFAirportData {
   name: string;
   city: string | null;
   state: string | null;
-  country: string | null;
+  country: string | { id: number; name: string; isoCode: string } | null;
   latitude: number;
   longitude: number;
   elevation: number;
@@ -33,6 +33,14 @@ export interface IFAirportData {
     description: string;
     frequency: number;
   }>;
+}
+
+// Helper function to extract country name from country field
+export function getCountryName(country: IFAirportData['country']): string | null {
+  if (!country) return null;
+  if (typeof country === 'string') return country;
+  if (typeof country === 'object' && 'name' in country) return country.name;
+  return null;
 }
 
 interface UseIFAirportReturn {

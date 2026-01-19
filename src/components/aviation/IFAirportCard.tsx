@@ -1,5 +1,5 @@
 import { MapPin, Plane, Radio, Navigation, Building2, AlertTriangle } from 'lucide-react';
-import { useInfiniteFlightAirport } from '@/hooks/useInfiniteFlightAirport';
+import { useInfiniteFlightAirport, getCountryName } from '@/hooks/useInfiniteFlightAirport';
 import { Skeleton } from '@/components/ui/skeleton';
 
 interface IFAirportCardProps {
@@ -75,7 +75,7 @@ export function IFAirportCard({ icao, label }: IFAirportCardProps) {
           <p className="text-sm text-muted-foreground">
             {airportData.city && `${airportData.city}, `}
             {airportData.state && `${airportData.state}, `}
-            {airportData.country}
+            {getCountryName(airportData.country)}
           </p>
         </div>
 
