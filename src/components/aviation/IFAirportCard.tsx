@@ -50,11 +50,12 @@ export function IFAirportCard({ icao, label }: IFAirportCardProps) {
       <div className="bg-card rounded-xl border border-border p-4">
         <div className="flex items-center gap-2 mb-4">
           <div className="w-1 h-6 bg-warning rounded-full" />
-          <h3 className="text-lg font-semibold text-foreground">{label} Airport</h3>
+          <h3 className="text-lg font-semibold text-foreground">{label} Airport - {icao}</h3>
         </div>
-        <div className="flex items-center justify-center text-muted-foreground py-8">
-          <AlertTriangle className="h-5 w-5 mr-2" />
-          <span>No data available for {icao}</span>
+        <div className="flex flex-col items-center justify-center text-muted-foreground py-8">
+          <AlertTriangle className="h-5 w-5 mb-2" />
+          <span className="text-sm">Airport data unavailable</span>
+          <span className="text-xs mt-1">{error || `Could not fetch data for ${icao}`}</span>
         </div>
       </div>
     );
