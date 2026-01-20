@@ -20,11 +20,11 @@ Deno.serve(async (req) => {
       return json({ error: "ICAO code is required" }, { status: 400 });
     }
 
-    console.log(`Fetching ATIS for ${icao}`);
+    console.log(`Fetching ATIS for ${icao} on Expert Server only`);
 
-    // Step 1: Get active sessions
+    // STEP 1: Get all active sessions
     const sessionsUrl = `https://api.infiniteflight.com/public/v2/sessions?apikey=${IF_API_KEY}`;
-    console.log("Fetching sessions...");
+    console.log("Step 1: Fetching all sessions...");
     
     const sessionsResponse = await fetch(sessionsUrl);
     
@@ -46,48 +46,59 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Try each active session to find ATIS for the airport
-    const sessions = sessionsData.result;
-    let atisData = null;
-    let foundSession = null;
-
-    for (const session of sessions) {
-      try {
-        const atisUrl = `https://api.infiniteflight.com/public/v2/sessions/${session.id}/airport/${icao.toUpperCase()}/atis?apikey=${IF_API_KEY}`;
-        console.log(`Trying ATIS for session ${session.name}: ${atisUrl}`);
-        
-        const atisResponse = await fetch(atisUrl);
-        
-        if (atisResponse.ok) {
-          const data = await atisResponse.json();
-          console.log(`ATIS response for ${session.name}:`, JSON.stringify(data));
-          
-          if (data.errorCode === 0 && data.result) {
-            atisData = data.result;
-            foundSession = session;
-            break;
-          }
-        }
-      } catch (e) {
-        console.log(`Error fetching ATIS from session ${session.name}:`, e);
-      }
+    // Filter for Expert Server only (type 2 is Expert Server)
+    const expertServer = sessionsData.result.find((session: any) => session.type === 2);
+    
+    if (!expertServer) {
+      console.log("Expert Server not found");
+      return json({
+        atis: null,
+        message: "Expert Server is not currently active",
+        availableServers: sessionsData.result.map((s: any) => ({ 
+          name: s.name, 
+          type: s.type 
+        }))
+      });
     }
 
-    if (atisData) {
+    console.log(`Found Expert Server: ${expertServer.name} (ID: ${expertServer.id})`);
+
+    // STEP 2: Get ATIS for the airport on Expert Server
+    const atisUrl = `https://api.infiniteflight.com/public/v2/sessions/${expertServer.id}/airport/${icao.toUpperCase()}/atis?apikey=${IF_API_KEY}`;
+    console.log(`Step 2: Fetching ATIS from Expert Server for ${icao.toUpperCase()}...`);
+    
+    const atisResponse = await fetch(atisUrl);
+    
+    if (!atisResponse.ok) {
+      console.error(`ATIS API error: ${atisResponse.status}`);
+      return json({ 
+        error: "Failed to fetch ATIS from Expert Server", 
+        status: atisResponse.status 
+      }, { status: atisResponse.status });
+    }
+
+    const atisData = await atisResponse.json();
+    console.log("ATIS response:", JSON.stringify(atisData));
+
+    if (atisData.errorCode === 0 && atisData.result) {
       return json({
-        atis: atisData,
+        atis: atisData.result,
         session: {
-          id: foundSession.id,
-          name: foundSession.name,
-          type: foundSession.type
+          id: expertServer.id,
+          name: expertServer.name,
+          type: expertServer.type
         },
         airport: icao.toUpperCase()
       });
     } else {
       return json({
         atis: null,
-        message: `No ATIS available for ${icao.toUpperCase()} in any active session`,
-        sessions: sessions.map((s: { name: string; type: number }) => ({ name: s.name, type: s.type }))
+        message: `No ATIS available for ${icao.toUpperCase()} on Expert Server`,
+        session: {
+          id: expertServer.id,
+          name: expertServer.name,
+          type: expertServer.type
+        }
       });
     }
 
