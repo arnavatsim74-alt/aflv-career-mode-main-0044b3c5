@@ -43,8 +43,12 @@ export function ATISCard({ icao, label }: ATISCardProps) {
     );
   }
 
-  // Extract ATIS text - atis can be an object with an 'atis' string field or null
-  const atisText = data?.atis && typeof data.atis === 'object' && 'atis' in data.atis 
+  // FILTER FOR EXPERT SERVER ONLY
+  // Only accept data if it's from Expert Server (session.name === "Expert")
+  const isExpertServer = data?.session?.name === "Expert";
+  
+  // Extract ATIS text only if from Expert Server
+  const atisText = isExpertServer && data?.atis && typeof data.atis === 'object' && 'atis' in data.atis 
     ? data.atis.atis 
     : null;
   const hasATIS = atisText && typeof atisText === 'string' && atisText.trim().length > 0;
@@ -58,7 +62,7 @@ export function ATISCard({ icao, label }: ATISCardProps) {
           {hasATIS && (
             <span className="bg-success/20 text-success text-xs px-2 py-0.5 rounded-full flex items-center gap-1">
               <Wifi className="h-3 w-3" />
-              LIVE
+              EXPERT
             </span>
           )}
         </div>
@@ -76,12 +80,10 @@ export function ATISCard({ icao, label }: ATISCardProps) {
           
           {/* Session and Airport Info */}
           <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
-            {data?.session?.name && (
-              <span className="flex items-center gap-1">
-                <span className="font-medium">Server:</span>
-                {data.session.name}
-              </span>
-            )}
+            <span className="flex items-center gap-1 text-success">
+              <span className="font-medium">Server:</span>
+              Expert Server
+            </span>
             {data?.airport && (
               <span className="flex items-center gap-1">
                 <span className="font-medium">Airport:</span>
@@ -94,16 +96,13 @@ export function ATISCard({ icao, label }: ATISCardProps) {
         <div className="text-center py-4">
           <Radio className="h-8 w-8 mx-auto text-muted-foreground/50 mb-2" />
           <p className="text-sm text-muted-foreground">
-            {data?.message || `No ATIS available for ${icao}`}
+            {!isExpertServer && data?.session?.name 
+              ? `ATIS found on ${data.session.name} - Expert Server only`
+              : `No ATIS available for ${icao} on Expert Server`}
           </p>
-          {data?.sessions && data.sessions.length > 0 && (
-            <p className="text-xs text-muted-foreground/70 mt-2">
-              Active servers: {data.sessions.map(s => s.name).join(', ')}
-            </p>
-          )}
-          {data?.error && (
-            <p className="text-xs text-destructive/70 mt-2">
-              {data.error}
+          {!isExpertServer && data?.session?.name && (
+            <p className="text-xs text-amber-500/70 mt-2">
+              ⚠️ Showing Expert Server only - ATIS available on {data.session.name}
             </p>
           )}
         </div>
