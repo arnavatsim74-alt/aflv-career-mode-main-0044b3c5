@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Navigate, useSearchParams, useNavigate } from 'react-router-dom';
-import { Plane, ArrowLeft, RefreshCw, Map, FileText, ExternalLink, Info } from 'lucide-react';
+import { Plane, ArrowLeft, RefreshCw, Map, Navigation, Fuel, CloudRain, List, Info, FileText, Download, ExternalLink } from 'lucide-react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -8,49 +8,23 @@ import { useAuth } from '@/hooks/useAuth';
 import { useSimBriefOFP, OFPData } from '@/hooks/useSimBriefOFP';
 import { IFAirportCard } from '@/components/aviation/IFAirportCard';
 import { ATISCard } from '@/components/aviation/ATISCard';
-import { MetarWeatherCard } from '@/components/aviation/MetarWeatherCard';
 import { Skeleton } from '@/components/ui/skeleton';
 
-export default function SimBriefDispatch() {
+export default function OFPViewer() {
   const { user, profile, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { ofpData, loading, error, fetchOFP, generateOFP } = useSimBriefOFP();
+  const { ofpData, loading, error, fetchOFP } = useSimBriefOFP();
   const [activeTab, setActiveTab] = useState('overview');
-  const [isGenerating, setIsGenerating] = useState(false);
 
-  const origin = searchParams.get('orig') || 'UUEE';
-  const destination = searchParams.get('dest') || 'UUEE';
-  const flightNumber = searchParams.get('fltnum') || '1234';
-  const aircraftType = searchParams.get('type') || 'A320';
   const legId = searchParams.get('legId') || '';
-
   const simbriefPid = profile?.simbrief_pid;
 
   useEffect(() => {
-    const initializeOFP = async () => {
-      if (!simbriefPid || ofpData || loading || isGenerating) return;
-
-      setIsGenerating(true);
-      
-      // Generate OFP with the dispatch parameters
-      await generateOFP({
-        airline: 'AFL',
-        fltnum: flightNumber,
-        orig: origin,
-        dest: destination,
-        type: aircraftType,
-      });
-
-      // Wait for SimBrief to process then fetch
-      setTimeout(async () => {
-        await fetchOFP(simbriefPid);
-        setIsGenerating(false);
-      }, 4000);
-    };
-
-    initializeOFP();
-  }, [simbriefPid, origin, destination, flightNumber, aircraftType]);
+    if (simbriefPid && !ofpData && !loading) {
+      fetchOFP(simbriefPid);
+    }
+  }, [simbriefPid, ofpData, loading, fetchOFP]);
 
   if (authLoading) {
     return (
@@ -73,7 +47,7 @@ export default function SimBriefDispatch() {
           <Info className="h-12 w-12 text-muted-foreground" />
           <h2 className="text-lg font-semibold">SimBrief PID Required</h2>
           <p className="text-muted-foreground text-center max-w-md">
-            Please add your SimBrief Pilot ID in your profile settings to use dispatch features.
+            Please add your SimBrief Pilot ID in your profile settings to view OFP data.
           </p>
           <Button variant="outline" onClick={() => navigate('/dispatch')}>
             <ArrowLeft className="h-4 w-4 mr-2" />
@@ -83,12 +57,6 @@ export default function SimBriefDispatch() {
       </DashboardLayout>
     );
   }
-
-  const handleRefresh = async () => {
-    if (simbriefPid) {
-      await fetchOFP(simbriefPid);
-    }
-  };
 
   const formatTime = (seconds: string | null) => {
     if (!seconds) return 'N/A';
@@ -103,14 +71,6 @@ export default function SimBriefDispatch() {
     return `${parseInt(kg).toLocaleString()} kg`;
   };
 
-  const formatLegTime = (seconds: string): string => {
-    if (!seconds) return '0h 0m';
-    const totalMins = parseInt(seconds) / 60;
-    const hrs = Math.floor(totalMins / 60);
-    const mins = Math.round(totalMins % 60);
-    return `${hrs}h ${mins}m`;
-  };
-
   return (
     <DashboardLayout>
       {/* Header */}
@@ -120,48 +80,38 @@ export default function SimBriefDispatch() {
             <ArrowLeft className="h-4 w-4" />
             Back to Dispatch
           </Button>
-          <div>
-            <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
-              <Plane className="h-5 w-5" />
-              Flight Planning: {origin} → {destination}
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              AFL{flightNumber} • {aircraftType}
-            </p>
-          </div>
+          {ofpData && (
+            <div>
+              <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
+                <Plane className="h-5 w-5" />
+                Operational Flight Plan
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                Aeroflot Virtual • Digital Dispatch
+              </p>
+            </div>
+          )}
         </div>
-        <Button variant="outline" size="sm" onClick={handleRefresh} disabled={loading || isGenerating} className="gap-2">
-          <RefreshCw className={`h-4 w-4 ${loading || isGenerating ? 'animate-spin' : ''}`} />
-          Refresh OFP
+        <Button variant="outline" size="sm" onClick={() => fetchOFP(simbriefPid)} disabled={loading} className="gap-2">
+          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+          Refresh
         </Button>
       </div>
 
-      {(loading || isGenerating) && (
+      {loading && (
         <div className="space-y-4">
-          <div className="bg-card border border-border rounded-xl p-6">
-            <div className="flex items-center gap-3">
-              <Plane className="h-6 w-6 animate-pulse text-warning" />
-              <div>
-                <p className="font-semibold text-foreground">Generating Flight Plan...</p>
-                <p className="text-sm text-muted-foreground">SimBrief is calculating your optimal route</p>
-              </div>
-            </div>
-          </div>
           <Skeleton className="h-32 w-full" />
           <Skeleton className="h-64 w-full" />
         </div>
       )}
 
-      {error && !loading && !isGenerating && (
-        <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-4 text-destructive mb-6">
+      {error && (
+        <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-4 text-destructive">
           {error}
-          <Button variant="outline" size="sm" onClick={handleRefresh} className="ml-4">
-            Retry
-          </Button>
         </div>
       )}
 
-      {ofpData && !loading && !isGenerating && (
+      {ofpData && (
         <>
           {/* Flight Summary Header */}
           <div className="bg-gradient-to-r from-card to-muted/50 border border-border rounded-xl p-6 mb-6">
@@ -181,23 +131,23 @@ export default function SimBriefDispatch() {
                 <p className="font-bold text-lg text-foreground">{ofpData.aircraft.icaocode}</p>
               </div>
               <div className="bg-muted/50 rounded-lg p-3">
-                <p className="text-xs text-muted-foreground uppercase">Flight Time</p>
-                <p className="font-bold text-lg text-foreground">{formatTime(ofpData.times.est_time_enroute)}</p>
+                <p className="text-xs text-muted-foreground uppercase">Reg</p>
+                <p className="font-bold text-lg text-foreground">{ofpData.aircraft.reg || 'N/A'}</p>
               </div>
             </div>
           </div>
 
           {/* Tabs Navigation */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid grid-cols-4 lg:grid-cols-8 mb-6 bg-muted/50 h-auto">
+            <TabsList className="grid grid-cols-4 lg:grid-cols-8 mb-6 bg-muted/50">
               <TabsTrigger value="overview" className="text-xs">Overview</TabsTrigger>
               <TabsTrigger value="map" className="text-xs">Map</TabsTrigger>
               <TabsTrigger value="route" className="text-xs">Route</TabsTrigger>
               <TabsTrigger value="fuel" className="text-xs">Fuel & Weights</TabsTrigger>
               <TabsTrigger value="weather" className="text-xs">Weather</TabsTrigger>
               <TabsTrigger value="navlog" className="text-xs">Nav Log</TabsTrigger>
-              <TabsTrigger value="airports" className="text-xs">Airports</TabsTrigger>
-              <TabsTrigger value="atis" className="text-xs">Live ATIS</TabsTrigger>
+              <TabsTrigger value="info" className="text-xs">Special Info</TabsTrigger>
+              <TabsTrigger value="charts" className="text-xs">Charts</TabsTrigger>
             </TabsList>
 
             {/* Overview Tab */}
@@ -237,15 +187,16 @@ export default function SimBriefDispatch() {
                 </div>
               </div>
 
-              {/* ATC Flight Plan */}
-              <div className="bg-card border border-border rounded-xl p-4">
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="w-1 h-6 bg-warning rounded-full" />
-                  <h3 className="text-lg font-semibold text-foreground">ATC Flight Plan</h3>
-                </div>
-                <div className="bg-muted/50 rounded-lg p-4 font-mono text-xs break-all whitespace-pre-wrap">
-                  {ofpData.atc.flightplan_text || 'No ATC flight plan data'}
-                </div>
+              {/* Airport Info from Infinite Flight */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <IFAirportCard icao={ofpData.origin.icao_code} label="Departure" />
+                <IFAirportCard icao={ofpData.destination.icao_code} label="Arrival" />
+              </div>
+
+              {/* ATIS Cards */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <ATISCard icao={ofpData.origin.icao_code} label="Departure" />
+                <ATISCard icao={ofpData.destination.icao_code} label="Arrival" />
               </div>
             </TabsContent>
 
@@ -368,51 +319,67 @@ export default function SimBriefDispatch() {
             {/* Weather Tab */}
             <TabsContent value="weather" className="space-y-6">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <MetarWeatherCard 
-                  icao={ofpData.origin.icao_code}
-                  label="Departure"
-                  metar={ofpData.origin.metar}
-                  runwayHeading={ofpData.origin.plan_rwy ? parseInt(ofpData.origin.plan_rwy.replace(/[LRC]/g, '')) * 10 : 0}
-                />
-                <MetarWeatherCard 
-                  icao={ofpData.destination.icao_code}
-                  label="Arrival"
-                  metar={ofpData.destination.metar}
-                  runwayHeading={ofpData.destination.plan_rwy ? parseInt(ofpData.destination.plan_rwy.replace(/[LRC]/g, '')) * 10 : 0}
-                />
-              </div>
-              
-              {/* TAF Section */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Departure Weather */}
                 <div className="bg-card border border-border rounded-xl p-4">
-                  <div className="flex items-center gap-2 mb-3">
+                  <div className="flex items-center gap-2 mb-4">
                     <div className="w-1 h-6 bg-warning rounded-full" />
-                    <h3 className="text-lg font-semibold text-foreground">Departure TAF - {ofpData.origin.icao_code}</h3>
+                    <h3 className="text-lg font-semibold text-foreground">Departure Weather - {ofpData.origin.icao_code}</h3>
+                  </div>
+                  <div className="space-y-4">
+                    <div>
+                      <p className="text-xs text-warning font-semibold mb-1">METAR</p>
+                      <p className="font-mono text-sm text-foreground bg-muted/50 p-2 rounded break-all">
+                        {ofpData.origin.metar || 'No METAR data'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-warning font-semibold mb-1">TAF</p>
+                      <p className="font-mono text-xs text-foreground bg-muted/50 p-2 rounded whitespace-pre-wrap">
+                        {ofpData.origin.taf || 'No TAF data'}
+                      </p>
+                    </div>
                     <FlightCategoryBadge category={ofpData.origin.metar_category} />
                   </div>
-                  <p className="font-mono text-xs text-foreground bg-muted/50 p-3 rounded whitespace-pre-wrap">
-                    {ofpData.origin.taf || 'No TAF data'}
-                  </p>
                 </div>
+
+                {/* Destination Weather */}
                 <div className="bg-card border border-border rounded-xl p-4">
-                  <div className="flex items-center gap-2 mb-3">
+                  <div className="flex items-center gap-2 mb-4">
                     <div className="w-1 h-6 bg-warning rounded-full" />
-                    <h3 className="text-lg font-semibold text-foreground">Arrival TAF - {ofpData.destination.icao_code}</h3>
+                    <h3 className="text-lg font-semibold text-foreground">Arrival Weather - {ofpData.destination.icao_code}</h3>
+                  </div>
+                  <div className="space-y-4">
+                    <div>
+                      <p className="text-xs text-warning font-semibold mb-1">METAR</p>
+                      <p className="font-mono text-sm text-foreground bg-muted/50 p-2 rounded break-all">
+                        {ofpData.destination.metar || 'No METAR data'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-warning font-semibold mb-1">TAF</p>
+                      <p className="font-mono text-xs text-foreground bg-muted/50 p-2 rounded whitespace-pre-wrap">
+                        {ofpData.destination.taf || 'No TAF data'}
+                      </p>
+                    </div>
                     <FlightCategoryBadge category={ofpData.destination.metar_category} />
                   </div>
-                  <p className="font-mono text-xs text-foreground bg-muted/50 p-3 rounded whitespace-pre-wrap">
-                    {ofpData.destination.taf || 'No TAF data'}
-                  </p>
                 </div>
               </div>
 
               {/* Alternate Weather */}
               {ofpData.alternate.icao_code && (
-                <MetarWeatherCard 
-                  icao={ofpData.alternate.icao_code}
-                  label="Alternate"
-                  metar={ofpData.alternate.metar}
-                />
+                <div className="bg-card border border-border rounded-xl p-4">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="w-1 h-6 bg-warning rounded-full" />
+                    <h3 className="text-lg font-semibold text-foreground">Alternate Weather - {ofpData.alternate.icao_code}</h3>
+                  </div>
+                  <div>
+                    <p className="text-xs text-warning font-semibold mb-1">METAR</p>
+                    <p className="font-mono text-sm text-foreground bg-muted/50 p-2 rounded break-all">
+                      {ofpData.alternate.metar || 'No METAR data'}
+                    </p>
+                  </div>
+                </div>
               )}
             </TabsContent>
 
@@ -452,24 +419,54 @@ export default function SimBriefDispatch() {
               </div>
             </TabsContent>
 
-            {/* Airports Tab */}
-            <TabsContent value="airports" className="space-y-6">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <IFAirportCard icao={ofpData.origin.icao_code} label="Departure" />
-                <IFAirportCard icao={ofpData.destination.icao_code} label="Arrival" />
-              </div>
-              {ofpData.alternate.icao_code && (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <IFAirportCard icao={ofpData.alternate.icao_code} label="Alternate" />
+            {/* Special Info Tab */}
+            <TabsContent value="info" className="space-y-6">
+              <div className="bg-card border border-border rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-1 h-6 bg-warning rounded-full" />
+                  <h3 className="text-lg font-semibold text-foreground">Special Information & Notices</h3>
                 </div>
-              )}
+                <p className="text-sm text-muted-foreground mb-4">
+                  Important notices, special passenger information, equipment advisories, and occasion greetings for this flight.
+                </p>
+                <div className="bg-muted/30 rounded-lg p-4 border-l-4 border-warning">
+                  <p className="text-sm text-foreground">
+                    No special notices for this flight.
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-card border border-border rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-1 h-6 bg-warning rounded-full" />
+                  <h3 className="text-lg font-semibold text-foreground">ATC Flight Plan</h3>
+                </div>
+                <div className="bg-muted/50 rounded-lg p-4 font-mono text-xs break-all whitespace-pre-wrap">
+                  {ofpData.atc.flightplan_text || 'No ATC flight plan data'}
+                </div>
+              </div>
             </TabsContent>
 
-            {/* Live ATIS Tab */}
-            <TabsContent value="atis" className="space-y-6">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <ATISCard icao={ofpData.origin.icao_code} label="Departure" />
-                <ATISCard icao={ofpData.destination.icao_code} label="Arrival" />
+            {/* Charts Tab */}
+            <TabsContent value="charts" className="space-y-6">
+              <div className="bg-card border border-border rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-1 h-6 bg-warning rounded-full" />
+                  <h3 className="text-lg font-semibold text-foreground">Available Charts</h3>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {ofpData.images.maps.map((map, idx) => (
+                    <Button
+                      key={idx}
+                      variant="outline"
+                      className="h-auto py-4 flex-col gap-2"
+                      onClick={() => window.open(map.fullUrl, '_blank')}
+                    >
+                      <FileText className="h-6 w-6" />
+                      <span className="text-xs">{map.name}</span>
+                    </Button>
+                  ))}
+                </div>
               </div>
             </TabsContent>
           </Tabs>
@@ -524,4 +521,12 @@ function FlightCategoryBadge({ category }: { category: string }) {
       {category || 'Unknown'}
     </span>
   );
+}
+
+function formatLegTime(seconds: string): string {
+  if (!seconds) return '0h 0m';
+  const totalMins = parseInt(seconds) / 60;
+  const hrs = Math.floor(totalMins / 60);
+  const mins = Math.round(totalMins % 60);
+  return `${hrs}h ${mins}m`;
 }

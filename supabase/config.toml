@@ -2,3 +2,30 @@ project_id = "ysyxmbrkygqmrvqzvkwl"
 
 [functions.check-maintenance]
 verify_jwt = false
+
+[functions.aviation-weather]
+verify_jwt = false
+
+[functions.infinite-flight-atis]
+verify_jwt = false
+
+[functions.infinite-flight-user-stats]
+verify_jwt = false
+
+[functions.infinite-flight-airport]
+verify_jwt = false
+
+[functions.simbrief-ofp]
+verify_jwt = false
+
+[functions.import-route-catalog]
+verify_jwt = false
+
+[functions.import-all-routes]
+verify_jwt = false
+
+[functions.auto-assign-career]
+verify_jwt = false
+
+[functions.auto-assign-career-admin]
+verify_jwt = false
