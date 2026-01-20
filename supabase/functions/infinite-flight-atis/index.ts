@@ -46,8 +46,10 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Filter for Expert Server only (type 2 is Expert Server)
-    const expertServer = sessionsData.result.find((session: any) => session.type === 2);
+    // Filter for Expert Server - it has name "Expert" and minimumGradeLevel 2
+    const expertServer = sessionsData.result.find(
+      (session: any) => session.name === "Expert" && session.minimumGradeLevel === 2
+    );
     
     if (!expertServer) {
       console.log("Expert Server not found");
@@ -56,7 +58,8 @@ Deno.serve(async (req) => {
         message: "Expert Server is not currently active",
         availableServers: sessionsData.result.map((s: any) => ({ 
           name: s.name, 
-          type: s.type 
+          type: s.type,
+          gradeLevel: s.minimumGradeLevel
         }))
       });
     }
@@ -86,7 +89,8 @@ Deno.serve(async (req) => {
         session: {
           id: expertServer.id,
           name: expertServer.name,
-          type: expertServer.type
+          type: expertServer.type,
+          gradeLevel: expertServer.minimumGradeLevel
         },
         airport: icao.toUpperCase()
       });
@@ -97,7 +101,8 @@ Deno.serve(async (req) => {
         session: {
           id: expertServer.id,
           name: expertServer.name,
-          type: expertServer.type
+          type: expertServer.type,
+          gradeLevel: expertServer.minimumGradeLevel
         }
       });
     }
