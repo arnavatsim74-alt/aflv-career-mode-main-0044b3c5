@@ -9,6 +9,7 @@ import { Progress } from '@/components/ui/progress';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useSimBriefDispatch } from '@/lib/simbrief/auto-dispatch';
 
 interface DispatchLeg {
   id: string;
@@ -50,6 +51,9 @@ export default function Dispatch() {
   const [careerRequest, setCareerRequest] = useState<CareerRequest | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRequesting, setIsRequesting] = useState(false);
+  
+  // Initialize SimBrief auto-dispatch hook
+  const { dispatch: simbriefDispatch, getManualUrl } = useSimBriefDispatch('/api/simbrief/');
 
   useEffect(() => {
     if (user) {
@@ -58,8 +62,6 @@ export default function Dispatch() {
   }, [user]);
 
   const cleanupStaleAssignments = async () => {
-    // If the user has ONLY completed legs left in the database, clear them + the approved request
-    // so the pilot can request a new assignment.
     const { data: allLegs, error: allLegsError } = await supabase
       .from('dispatch_legs')
       .select('id, status')
@@ -94,7 +96,6 @@ export default function Dispatch() {
 
     if (deleteRequestsError) {
       console.error('Error deleting stale career requests:', deleteRequestsError);
-      // Even if request deletion fails, legs are cleared, so allow UI to recover.
     }
 
     setCareerRequest(null);
@@ -106,7 +107,6 @@ export default function Dispatch() {
   const fetchDispatchData = async () => {
     setIsLoading(true);
 
-    // Latest career request
     const { data: requestData, error: requestError } = await supabase
       .from('career_requests')
       .select('*')
@@ -123,7 +123,6 @@ export default function Dispatch() {
     const latestRequest = requestData && requestData.length > 0 ? requestData[0] : null;
     setCareerRequest(latestRequest);
 
-    // All dispatch legs for current sector (include all statuses to show progress)
     const { data: legsData, error: legsError } = await supabase
       .from('dispatch_legs')
       .select(`
@@ -146,8 +145,6 @@ export default function Dispatch() {
       return;
     }
 
-    // If the request is approved but there are no active legs, the user can get stuck.
-    // In that case, automatically clear the old completed sector + request.
     if (latestRequest?.status === 'approved' && (!legsData || legsData.length === 0)) {
       const didCleanup = await cleanupStaleAssignments();
       if (didCleanup) {
@@ -221,12 +218,10 @@ export default function Dispatch() {
     setIsRequesting(true);
 
     try {
-      // Get all completed legs for this user
       const completedLegs = dispatchLegs.filter(
         (l) => l.status === 'completed' || l.pirep?.status === 'approved'
       );
 
-      // Mark legs as completed first
       const legsToComplete = dispatchLegs
         .filter((l) => l.pirep?.status === 'approved' && l.status !== 'completed')
         .map((l) => l.id);
@@ -245,8 +240,6 @@ export default function Dispatch() {
         }
       }
 
-      // Update aircraft status for completed flights - mark each leg's arrival
-      // Get unique tail numbers and their final arrival airports
       const tailNumber = dispatchLegs[0]?.tail_number;
       const lastLeg = dispatchLegs[dispatchLegs.length - 1];
       const totalFlightHours = dispatchLegs.reduce(
@@ -255,7 +248,6 @@ export default function Dispatch() {
       );
 
       if (tailNumber && lastLeg?.route?.arrival_airport) {
-        // Call the database function to complete the flight and handle maintenance
         const { error: fleetError } = await supabase.rpc('complete_aircraft_flight', {
           p_tail_number: tailNumber,
           p_arrival_airport: lastLeg.route.arrival_airport,
@@ -264,11 +256,9 @@ export default function Dispatch() {
 
         if (fleetError) {
           console.error('Failed to update fleet status:', fleetError);
-          // Continue anyway - this is not critical to the dispatch flow
         }
       }
 
-      // First, nullify dispatch_leg_id in pireps to avoid foreign key constraint violation
       const allLegIds = dispatchLegs.map((l) => l.id);
       if (allLegIds.length > 0) {
         const { error: nullifyError } = await supabase
@@ -278,11 +268,9 @@ export default function Dispatch() {
 
         if (nullifyError) {
           console.error('Failed to unlink PIREPs:', nullifyError);
-          // Continue anyway - PIREPs might not exist for all legs
         }
       }
 
-      // Delete all legs for this user (not just completed - we've unlinked the PIREPs)
       const { error: deleteLegsError } = await supabase
         .from('dispatch_legs')
         .delete()
@@ -295,7 +283,6 @@ export default function Dispatch() {
         return;
       }
 
-      // Delete processed career requests
       const { error: deleteRequestsError } = await supabase
         .from('career_requests')
         .delete()
@@ -304,10 +291,8 @@ export default function Dispatch() {
 
       if (deleteRequestsError) {
         console.error('Failed to clear career requests:', deleteRequestsError);
-        // Continue anyway - this is not critical
       }
 
-      // Auto-assign new vCAREER instead of creating pending manual request
       const { error: autoAssignError } = await supabase.functions.invoke('auto-assign-career', {
         body: { legs: 3 },
       });
@@ -326,9 +311,19 @@ export default function Dispatch() {
     }
   };
 
+  /**
+   * NEW: Auto-dispatch with SimBrief integration
+   * Updates status and opens SimBrief with pre-filled data
+   */
   const dispatchFlight = async (legId: string) => {
     const leg = dispatchLegs.find(l => l.id === legId);
     
+    if (!leg) {
+      toast.error('Leg not found');
+      return;
+    }
+
+    // Update status to dispatched
     const { error } = await supabase
       .from('dispatch_legs')
       .update({ status: 'dispatched' })
@@ -336,36 +331,30 @@ export default function Dispatch() {
 
     if (error) {
       toast.error('Failed to dispatch flight: ' + error.message);
-    } else {
-      toast.success('Flight dispatched!');
-      
-      // Navigate to embedded SimBrief page instead of opening new window
-      if (leg?.route) {
-        const params = new URLSearchParams({
-          orig: leg.route.departure_airport,
-          dest: leg.route.arrival_airport,
-          fltnum: leg.route.flight_number?.replace(/\D/g, '') || '1234',
-          type: leg.aircraft?.type_code || 'A320',
-          legId: legId,
-        });
-        navigate(`/simbrief?${params.toString()}`);
-      } else {
-        fetchDispatchData();
-      }
+      return;
     }
+
+    toast.success('Flight dispatched! Opening SimBrief...');
+
+    try {
+      // Auto-dispatch with SimBrief (opens popup with pre-filled form)
+      await simbriefDispatch(leg, `/pirep?leg=${leg.id}`);
+    } catch (error) {
+      console.error('SimBrief auto-dispatch error:', error);
+      toast.error('SimBrief auto-dispatch failed. Opening manual link...');
+      
+      // Fallback to manual URL
+      const manualUrl = getManualUrl(leg);
+      window.open(manualUrl, '_blank');
+    }
+
+    // Refresh data
+    fetchDispatchData();
   };
 
   const buildSimbriefUrl = (leg: DispatchLeg) => {
-    const baseUrl = 'https://dispatch.simbrief.com/options/custom';
-    const params = new URLSearchParams({
-      airline: 'AFL', // Aeroflot
-      fltnum: leg.route?.flight_number?.replace(/\D/g, '') || '1234', // Extract flight number digits
-      type: leg.aircraft?.type_code || 'A320',
-      orig: leg.route?.departure_airport || 'UUEE',
-      dest: leg.route?.arrival_airport || 'UUEE',
-    });
-    
-    return `${baseUrl}?${params.toString()}`;
+    // Use the manual URL builder from the hook
+    return getManualUrl(leg);
   };
 
   if (loading || isLoading) {
@@ -382,26 +371,21 @@ export default function Dispatch() {
     return <Navigate to="/auth" replace />;
   }
 
-  // Calculate progress - count legs with approved PIREPs as completed
   const completedLegs = dispatchLegs.filter(leg => 
     leg.status === 'completed' || leg.pirep?.status === 'approved'
   ).length;
   const totalLegs = dispatchLegs.length;
   const progressPercent = totalLegs > 0 ? (completedLegs / totalLegs) * 100 : 0;
 
-  // Get totals
   const totalDistance = dispatchLegs.reduce((sum, leg) => sum + (leg.route?.distance_nm || 0), 0);
   const totalTime = dispatchLegs.reduce((sum, leg) => sum + (leg.route?.estimated_time_hrs || 0), 0);
 
   const getButtonForLeg = (leg: DispatchLeg, index: number) => {
-    // Check if previous leg is completed OR awaiting review (PIREP submitted)
-    // This allows the next leg to be unlocked when previous is awaiting review
     const previousLegReady = index === 0 || 
       dispatchLegs[index - 1]?.status === 'completed' || 
       dispatchLegs[index - 1]?.pirep?.status === 'approved' ||
-      dispatchLegs[index - 1]?.pirep?.status === 'pending'; // Unlock when PIREP is pending review
+      dispatchLegs[index - 1]?.pirep?.status === 'pending';
     
-    // If leg has a PIREP
     if (leg.pirep) {
       if (leg.pirep.status === 'rejected') {
         return (
@@ -425,11 +409,10 @@ export default function Dispatch() {
         );
       }
       if (leg.pirep.status === 'approved') {
-        return null; // No button needed for completed legs
+        return null;
       }
     }
 
-    // Based on leg status
     switch (leg.status) {
       case 'assigned':
         if (!previousLegReady) {
@@ -447,7 +430,7 @@ export default function Dispatch() {
             className="gap-2"
           >
             <Send className="h-4 w-4" />
-            Dispatch
+            Dispatch (Auto SimBrief)
           </Button>
         );
       case 'dispatched':
@@ -469,7 +452,7 @@ export default function Dispatch() {
           </Button>
         );
       case 'completed':
-        return null; // No button needed
+        return null;
       default:
         return null;
     }
@@ -484,7 +467,6 @@ export default function Dispatch() {
     return leg.status;
   };
 
-  // No dispatch legs and no active request
   if (dispatchLegs.length === 0) {
     return (
       <DashboardLayout>
@@ -539,14 +521,12 @@ export default function Dispatch() {
     );
   }
 
-  // Get first leg's aircraft info for the header
   const firstLeg = dispatchLegs[0];
   const aircraftInfo = firstLeg?.aircraft;
 
   return (
     <DashboardLayout>
       <SectionCard className="mb-0">
-        {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-xl font-bold flex items-center gap-2 text-card-foreground">
@@ -562,10 +542,8 @@ export default function Dispatch() {
           </div>
         </div>
         
-        {/* Progress Bar */}
         <Progress value={progressPercent} className="h-2 mb-4" />
 
-        {/* Request Another vCAREER Button - Show when 100% complete */}
         {progressPercent === 100 && (
           <div className="mb-6 p-4 bg-success/10 border border-success/30 rounded-xl text-center">
             <p className="text-success font-bold mb-3">🎉 Congratulations! You've completed all legs!</p>
@@ -580,7 +558,6 @@ export default function Dispatch() {
           </div>
         )}
 
-        {/* Legs */}
         <div className="space-y-4">
           {dispatchLegs.map((leg, index) => (
             <div 
@@ -599,7 +576,6 @@ export default function Dispatch() {
                 </div>
                 <div className="flex items-center gap-3 flex-wrap">
                   <StatusBadge status={getLegStatus(leg) as any} />
-                  {/* SimBrief link for dispatched or in-progress legs */}
                   {(leg.status === 'dispatched' || leg.pirep?.status === 'pending') && (
                     <a
                       href={buildSimbriefUrl(leg)}
@@ -608,7 +584,7 @@ export default function Dispatch() {
                       className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
                     >
                       <ExternalLink className="h-3 w-3" />
-                      SimBrief
+                      SimBrief Manual
                     </a>
                   )}
                   {getButtonForLeg(leg, index)}
@@ -618,7 +594,6 @@ export default function Dispatch() {
           ))}
         </div>
 
-        {/* Summary */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 pt-6 border-t border-border">
           <div className="text-center">
             <p className="text-sm text-muted-foreground">Total Distance</p>
@@ -638,7 +613,6 @@ export default function Dispatch() {
           </div>
         </div>
 
-        {/* Sector ID */}
         <div className="mt-4 pt-4 border-t border-border">
           <p className="text-xs text-muted-foreground font-mono">
             Sector ID: {firstLeg?.dispatch_group_id || 'N/A'}
