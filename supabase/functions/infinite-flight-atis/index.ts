@@ -10,22 +10,15 @@ interface InfiniteFlightSession {
   currentUsers: number;
 }
 
-interface ATISResult {
-  frequencyId: string;
-  airportIcao: string;
-  latitude: number;
-  longitude: number;
-  atis: string;
-}
-
 interface SessionsApiResponse {
   errorCode: number;
   result: InfiniteFlightSession[];
 }
 
+// The ATIS API actually returns the ATIS text directly in result, not nested
 interface ATISApiResponse {
   errorCode: number;
-  result: ATISResult | null;
+  result: string | null; // ATIS text is returned directly as a string!
 }
 
 Deno.serve(async (req) => {
@@ -47,13 +40,11 @@ Deno.serve(async (req) => {
     }
 
     const normalizedIcao = icao.toUpperCase().trim();
-    console.log(`\n========================================`);
     console.log(`Fetching ATIS for ${normalizedIcao}`);
-    console.log(`========================================\n`);
 
     // Step 1: Get active sessions
     const sessionsUrl = `https://api.infiniteflight.com/public/v2/sessions?apikey=${IF_API_KEY}`;
-    console.log("📡 Fetching active sessions...");
+    console.log("Fetching active sessions...");
     
     const sessionsResponse = await fetch(sessionsUrl, {
       headers: {
@@ -63,7 +54,7 @@ Deno.serve(async (req) => {
     });
     
     if (!sessionsResponse.ok) {
-      console.error(`❌ Sessions API error: ${sessionsResponse.status}`);
+      console.error(`Sessions API error: ${sessionsResponse.status}`);
       return json({ 
         error: "Failed to fetch sessions from Infinite Flight API", 
         status: sessionsResponse.status 
@@ -71,12 +62,11 @@ Deno.serve(async (req) => {
     }
 
     const sessionsData: SessionsApiResponse = await sessionsResponse.json();
-    console.log(`✓ Found ${sessionsData.result?.length || 0} active sessions`);
-    console.log(`Sessions:`, sessionsData.result?.map(s => `${s.name} (${s.id})`).join(', '));
+    console.log(`Found ${sessionsData.result?.length || 0} active sessions`);
 
     // Check for API errors
     if (sessionsData.errorCode !== 0) {
-      console.error(`❌ Sessions API returned error code: ${sessionsData.errorCode}`);
+      console.error(`Sessions API returned error code: ${sessionsData.errorCode}`);
       return json({ 
         error: `Infinite Flight API error: ${sessionsData.errorCode}`,
         atis: null 
@@ -92,25 +82,13 @@ Deno.serve(async (req) => {
 
     // Step 2: Try each active session to find ATIS for the airport
     const sessions = sessionsData.result;
-    let atisData: ATISResult | null = null;
+    let atisText: string | null = null;
     let foundSession: InfiniteFlightSession | null = null;
-    const diagnostics: Array<{
-      sessionName: string;
-      sessionId: string;
-      status: number;
-      errorCode?: number;
-      hasResult: boolean;
-      resultData?: any;
-      error?: string;
-    }> = [];
-
-    console.log(`\n🔍 Checking each session for ${normalizedIcao} ATIS...\n`);
 
     for (const session of sessions) {
       try {
         const atisUrl = `https://api.infiniteflight.com/public/v2/sessions/${session.id}/airport/${normalizedIcao}/atis?apikey=${IF_API_KEY}`;
-        console.log(`\n📍 Session: "${session.name}" (ID: ${session.id})`);
-        console.log(`   URL: ${atisUrl.replace(IF_API_KEY, 'API_KEY_HIDDEN')}`);
+        console.log(`Checking session "${session.name}" (ID: ${session.id})`);
         
         const atisResponse = await fetch(atisUrl, {
           headers: {
@@ -119,98 +97,52 @@ Deno.serve(async (req) => {
           cache: 'no-store'
         });
         
-        const status = atisResponse.status;
-        console.log(`   Status: ${status}`);
-        
         if (!atisResponse.ok) {
-          const errorText = await atisResponse.text();
-          console.log(`   ❌ Error response: ${errorText}`);
-          diagnostics.push({
-            sessionName: session.name,
-            sessionId: session.id,
-            status,
-            hasResult: false,
-            error: errorText
-          });
+          console.log(`Session ${session.name} returned status ${atisResponse.status}`);
           continue;
         }
 
         const data: ATISApiResponse = await atisResponse.json();
-        console.log(`   Response errorCode: ${data.errorCode}`);
-        console.log(`   Has result: ${!!data.result}`);
-        console.log(`   Full response:`, JSON.stringify(data, null, 2));
+        console.log(`ATIS response for ${session.name}:`, JSON.stringify(data));
         
-        diagnostics.push({
-          sessionName: session.name,
-          sessionId: session.id,
-          status,
-          errorCode: data.errorCode,
-          hasResult: !!data.result,
-          resultData: data.result
-        });
-        
-        // Check for successful response with valid ATIS data
-        // Note: According to IF API docs, errorCode 0 = success
-        if (data.errorCode === 0 && data.result) {
-          // Check if ATIS text exists and is not empty
-          if (data.result.atis && data.result.atis.trim().length > 0) {
-            atisData = data.result;
-            foundSession = session;
-            console.log(`   ✅ FOUND VALID ATIS!`);
-            console.log(`   ATIS Text: ${data.result.atis}`);
-            break;
-          } else {
-            console.log(`   ⚠️  Result exists but ATIS text is empty`);
-          }
-        } else if (data.errorCode !== 0) {
-          console.log(`   ⚠️  API returned error code: ${data.errorCode}`);
+        // Check for successful response with valid ATIS text
+        // The result is the ATIS string directly, not a nested object
+        if (data.errorCode === 0 && data.result && typeof data.result === 'string' && data.result.trim().length > 0) {
+          atisText = data.result.trim();
+          foundSession = session;
+          console.log(`✓ Found ATIS in session "${session.name}"`);
+          break;
         }
       } catch (e) {
-        console.log(`   ❌ Exception: ${e.message}`);
-        diagnostics.push({
-          sessionName: session.name,
-          sessionId: session.id,
-          status: 0,
-          hasResult: false,
-          error: e.message
-        });
+        console.log(`Error fetching ATIS from session ${session.name}:`, e.message);
         continue;
       }
     }
 
-    console.log(`\n========================================`);
-    console.log(`Search complete for ${normalizedIcao}`);
-    console.log(`========================================\n`);
-
     // Step 3: Return results
-    if (atisData && foundSession) {
-      console.log(`✅ SUCCESS: Returning ATIS from session "${foundSession.name}"`);
+    if (atisText && foundSession) {
       return json({
-        atis: atisData,
+        atis: atisText, // Return the ATIS text directly
         session: {
           id: foundSession.id,
           name: foundSession.name,
           type: foundSession.type
         },
-        airport: normalizedIcao,
-        diagnostics // Include diagnostics for debugging
+        airport: normalizedIcao
       });
     } else {
-      console.log(`❌ NO ATIS FOUND for ${normalizedIcao} in any session`);
       return json({
         atis: null,
         message: `No ATIS available for ${normalizedIcao} in any active session`,
         sessions: sessions.map(s => ({ 
           name: s.name, 
-          type: s.type,
-          id: s.id
-        })),
-        diagnostics // Include diagnostics to see what went wrong
+          type: s.type 
+        }))
       });
     }
 
   } catch (error) {
-    console.error("💥 Error in infinite-flight-atis function:", error);
+    console.error("Error in infinite-flight-atis function:", error);
     return json({ 
       error: error instanceof Error ? error.message : "Unknown error occurred",
       atis: null
