@@ -1,8 +1,7 @@
-import { Radio, RefreshCw, AlertCircle, Wifi, Server, Bug } from 'lucide-react';
+import { Radio, RefreshCw, AlertCircle, Wifi, Server } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useInfiniteFlightATIS } from '@/hooks/useInfiniteFlightATIS';
-import { useState } from 'react';
 
 interface ATISCardProps {
   icao: string;
@@ -11,7 +10,6 @@ interface ATISCardProps {
 
 export function ATISCard({ icao, label }: ATISCardProps) {
   const { data, loading, error, refetch } = useInfiniteFlightATIS(icao);
-  const [showDiagnostics, setShowDiagnostics] = useState(false);
 
   if (loading) {
     return (
@@ -45,16 +43,12 @@ export function ATISCard({ icao, label }: ATISCardProps) {
     );
   }
 
-  // Safely extract ATIS text with proper type checking
-  const atisText = data?.atis && 
-                   typeof data.atis === 'object' && 
-                   'atis' in data.atis &&
-                   typeof data.atis.atis === 'string'
-    ? data.atis.atis.trim()
+  // ATIS is now returned as a string directly, not nested in an object
+  const atisText = data?.atis && typeof data.atis === 'string' 
+    ? data.atis.trim() 
     : null;
   
   const hasATIS = atisText && atisText.length > 0;
-  const hasDiagnostics = data?.diagnostics && Array.isArray(data.diagnostics);
 
   return (
     <div className="bg-card border border-border rounded-xl p-4">
@@ -69,28 +63,15 @@ export function ATISCard({ icao, label }: ATISCardProps) {
             </span>
           )}
         </div>
-        <div className="flex items-center gap-2">
-          {hasDiagnostics && !hasATIS && (
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={() => setShowDiagnostics(!showDiagnostics)}
-              className="hover:bg-primary/10"
-              title="Show diagnostics"
-            >
-              <Bug className="h-4 w-4" />
-            </Button>
-          )}
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={refetch}
-            className="hover:bg-primary/10"
-            title="Refresh ATIS"
-          >
-            <RefreshCw className="h-4 w-4" />
-          </Button>
-        </div>
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          onClick={refetch}
+          className="hover:bg-primary/10"
+          title="Refresh ATIS"
+        >
+          <RefreshCw className="h-4 w-4" />
+        </Button>
       </div>
 
       {hasATIS ? (
@@ -133,40 +114,6 @@ export function ATISCard({ icao, label }: ATISCardProps) {
               <p className="text-xs text-muted-foreground font-mono">
                 {data.sessions.map(s => s.name).join(', ')}
               </p>
-            </div>
-          )}
-
-          {/* Diagnostics Section */}
-          {hasDiagnostics && showDiagnostics && (
-            <div className="mt-4 p-3 bg-slate-900/50 rounded-lg border border-slate-700/50 text-left">
-              <div className="flex items-center gap-2 mb-2">
-                <Bug className="h-4 w-4 text-amber-500" />
-                <span className="text-xs font-semibold text-amber-500">Diagnostics</span>
-              </div>
-              <div className="space-y-2 max-h-60 overflow-y-auto">
-                {data.diagnostics.map((diag: any, idx: number) => (
-                  <div key={idx} className="text-xs font-mono bg-black/30 p-2 rounded border border-slate-700/30">
-                    <div className="text-slate-300 font-semibold mb-1">
-                      {diag.sessionName} ({diag.sessionId})
-                    </div>
-                    <div className="text-slate-400 space-y-0.5">
-                      <div>Status: {diag.status}</div>
-                      {diag.errorCode !== undefined && (
-                        <div>Error Code: {diag.errorCode}</div>
-                      )}
-                      <div>Has Result: {diag.hasResult ? 'Yes' : 'No'}</div>
-                      {diag.resultData && (
-                        <div className="mt-1 text-slate-500">
-                          Result: {JSON.stringify(diag.resultData, null, 2)}
-                        </div>
-                      )}
-                      {diag.error && (
-                        <div className="text-red-400">Error: {diag.error}</div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
             </div>
           )}
           
