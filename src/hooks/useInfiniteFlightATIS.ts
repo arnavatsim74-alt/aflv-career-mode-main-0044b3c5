@@ -39,19 +39,31 @@ export function useInfiniteFlightATIS(icao: string | null) {
     setError(null);
 
     try {
+      // Add timestamp to prevent caching issues
       const { data: response, error: fnError } = await supabase.functions.invoke(
         'infinite-flight-atis',
-        { body: { icao } }
+        { 
+          body: { 
+            icao,
+            timestamp: Date.now() // Force fresh request
+          } 
+        }
       );
 
       if (fnError) {
         throw new Error(fnError.message);
       }
 
+      // Check if the response indicates an error
+      if (response?.error) {
+        throw new Error(response.error);
+      }
+
       setData(response);
     } catch (err) {
       console.error('Error fetching ATIS:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch ATIS');
+      setData(null);
     } finally {
       setLoading(false);
     }
