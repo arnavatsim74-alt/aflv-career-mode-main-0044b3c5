@@ -1,14 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
-export interface ATISData {
-  frequencyId: string;
-  airportIcao: string;
-  latitude: number;
-  longitude: number;
-  atis: string;
-}
-
 export interface ATISSession {
   id: string;
   name: string;
@@ -16,7 +8,7 @@ export interface ATISSession {
 }
 
 export interface ATISResponse {
-  atis: ATISData | null;
+  atis: string | null; // Changed: ATIS is now a string directly, not an object
   session?: ATISSession;
   airport?: string;
   message?: string;
@@ -41,17 +33,27 @@ export function useInfiniteFlightATIS(icao: string | null) {
     try {
       const { data: response, error: fnError } = await supabase.functions.invoke(
         'infinite-flight-atis',
-        { body: { icao } }
+        { 
+          body: { 
+            icao,
+            timestamp: Date.now() // Prevent caching
+          } 
+        }
       );
 
       if (fnError) {
         throw new Error(fnError.message);
       }
 
+      if (response?.error) {
+        throw new Error(response.error);
+      }
+
       setData(response);
     } catch (err) {
       console.error('Error fetching ATIS:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch ATIS');
+      setData(null);
     } finally {
       setLoading(false);
     }
