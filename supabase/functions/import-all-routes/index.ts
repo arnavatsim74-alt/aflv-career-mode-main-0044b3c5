@@ -360,7 +360,9 @@ Deno.serve(async (req) => {
 
       return {
         flight_number: pick(r, idxFlight),
+        route_number: pick(r, idxFlight),
         code: idxCode >= 0 ? pick(r, idxCode) : null,
+        route_type: idxCode >= 0 ? pick(r, idxCode) : null,
         dep_city: idxDepCity >= 0 ? pick(r, idxDepCity) : null,
         arr_city: idxArrCity >= 0 ? pick(r, idxArrCity) : null,
         dep_icao: pick(r, idxDepIcao).toUpperCase(),
@@ -368,6 +370,8 @@ Deno.serve(async (req) => {
         aircraft: idxAircraft >= 0 ? pick(r, idxAircraft) : null,
         duration_raw: durationRaw || null,
         duration_mins: durationMins,
+        rank: null,
+        notes: idxRemarks >= 0 ? pick(r, idxRemarks) : null,
         remarks: idxRemarks >= 0 ? pick(r, idxRemarks) : null,
         lmt: lmt && lmt !== "Invalid Date" ? lmt : null,
       };

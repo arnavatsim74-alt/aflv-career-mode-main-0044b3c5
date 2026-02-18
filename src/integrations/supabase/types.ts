@@ -497,7 +497,11 @@ export type Database = {
           flight_number: string
           id: string
           lmt: string | null
+          notes: string | null
+          rank: string | null
           remarks: string | null
+          route_number: string | null
+          route_type: string | null
         }
         Insert: {
           aircraft?: string | null
@@ -512,7 +516,11 @@ export type Database = {
           flight_number: string
           id?: string
           lmt?: string | null
+          notes?: string | null
+          rank?: string | null
           remarks?: string | null
+          route_number?: string | null
+          route_type?: string | null
         }
         Update: {
           aircraft?: string | null
@@ -527,12 +535,17 @@ export type Database = {
           flight_number?: string
           id?: string
           lmt?: string | null
+          notes?: string | null
+          rank?: string | null
           remarks?: string | null
+          route_number?: string | null
+          route_type?: string | null
         }
         Relationships: []
       }
       routes: {
         Row: {
+          aircraft: string | null
           arrival_airport: string
           created_at: string
           departure_airport: string
@@ -540,8 +553,13 @@ export type Database = {
           estimated_time_hrs: number
           flight_number: string
           id: string
+          notes: string | null
+          rank: string | null
+          route_number: string | null
+          route_type: string | null
         }
         Insert: {
+          aircraft?: string | null
           arrival_airport: string
           created_at?: string
           departure_airport: string
@@ -549,8 +567,13 @@ export type Database = {
           estimated_time_hrs: number
           flight_number: string
           id?: string
+          notes?: string | null
+          rank?: string | null
+          route_number?: string | null
+          route_type?: string | null
         }
         Update: {
+          aircraft?: string | null
           arrival_airport?: string
           created_at?: string
           departure_airport?: string
@@ -558,6 +581,10 @@ export type Database = {
           estimated_time_hrs?: number
           flight_number?: string
           id?: string
+          notes?: string | null
+          rank?: string | null
+          route_number?: string | null
+          route_type?: string | null
         }
         Relationships: []
       }
