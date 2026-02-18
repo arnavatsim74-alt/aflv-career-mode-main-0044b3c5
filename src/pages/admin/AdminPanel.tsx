@@ -6,6 +6,7 @@ import { AdminCareerRequests } from '@/components/admin/AdminCareerRequests';
 import { AdminPendingPireps } from '@/components/admin/AdminPendingPireps';
 import { AdminRegistrations } from '@/components/admin/AdminRegistrations';
 import { AdminFleetManagement } from '@/components/admin/AdminFleetManagement';
+import { AdminFlightHourMultipliers } from '@/components/admin/AdminFlightHourMultipliers';
 
 export default function AdminPanel() {
   const { user, isAdmin, loading } = useAuth();
@@ -33,6 +34,7 @@ export default function AdminPanel() {
       <div className="space-y-6">
         <h1 className="text-2xl font-bold">AFLV vCAREER PANEL</h1>
         <AdminFleetManagement />
+        <AdminFlightHourMultipliers />
         <AdminRegistrations />
         <AdminCareerRequests />
         <AdminPendingPireps />

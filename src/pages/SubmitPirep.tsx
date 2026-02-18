@@ -63,6 +63,7 @@ export default function SubmitPirep() {
   const [cargoWeight, setCargoWeight] = useState('');
   const [landingRate, setLandingRate] = useState('');
   const [fuelUsed, setFuelUsed] = useState('');
+  const [calculatedMultiplier, setCalculatedMultiplier] = useState(1);
 
   useEffect(() => {
     if (user) {
@@ -121,6 +122,59 @@ export default function SubmitPirep() {
     setIsLoading(false);
   };
 
+  useEffect(() => {
+    if (!user || !selectedAircraftId) return;
+
+    const recalcMultiplier = async () => {
+      const totalHours = parseFloat(flightTimeHrs || '0') + (parseInt(flightTimeMins || '0') / 60);
+
+      const { data: aircraftRow } = await supabase
+        .from('aircraft')
+        .select('multiplier')
+        .eq('id', selectedAircraftId)
+        .maybeSingle();
+
+      const aircraftMultiplier = Number(aircraftRow?.multiplier ?? 1);
+
+      let baseMultiplier = 1;
+      const { data: profileRow } = await supabase
+        .from('profiles')
+        .select('base_airport')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (profileRow?.base_airport) {
+        const { data: baseRow } = await supabase
+          .from('bases')
+          .select('multiplier')
+          .eq('icao_code', profileRow.base_airport)
+          .maybeSingle();
+        baseMultiplier = Number(baseRow?.multiplier ?? 1);
+      }
+
+      let hourMultiplier = 1;
+      const { data: hourRules } = await supabase
+        .from('flight_hour_multipliers')
+        .select('multiplier, min_hours, max_hours')
+        .eq('is_active', true)
+        .order('multiplier', { ascending: false });
+
+      const matchedRule = hourRules?.find((rule) => {
+        const minHours = Number(rule.min_hours);
+        const maxHours = rule.max_hours == null ? null : Number(rule.max_hours);
+        return totalHours >= minHours && (maxHours == null || totalHours <= maxHours);
+      });
+
+      if (matchedRule) {
+        hourMultiplier = Number(matchedRule.multiplier ?? 1);
+      }
+
+      setCalculatedMultiplier(Number((aircraftMultiplier * baseMultiplier * hourMultiplier).toFixed(2)));
+    };
+
+    void recalcMultiplier();
+  }, [user, selectedAircraftId, flightTimeHrs, flightTimeMins]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -149,6 +203,7 @@ export default function SubmitPirep() {
       cargo_weight_kg: cargoWeight ? parseInt(cargoWeight) : null,
       landing_rate: landingRate ? parseInt(landingRate) : null,
       fuel_used: fuelUsed ? parseInt(fuelUsed) : null,
+      multiplier: calculatedMultiplier,
       status: 'pending',
     };
 
@@ -159,6 +214,26 @@ export default function SubmitPirep() {
     if (error) {
       toast.error('Failed to submit PIREP: ' + error.message);
     } else {
+      await supabase.functions.invoke('discord-career-bot', {
+        body: {
+          command: 'notify_pirep',
+          payload: {
+            username: 'AFLV Career Bot',
+            embeds: [
+              {
+                title: 'New PIREP Filed',
+                description: `${pirepData.flight_number} ${pirepData.departure_airport} → ${pirepData.arrival_airport}`,
+                fields: [
+                  { name: 'Pilot', value: user!.id, inline: false },
+                  { name: 'Multiplier', value: `${calculatedMultiplier}x`, inline: true },
+                  { name: 'Aircraft', value: selectedAircraft?.type_code ?? '-', inline: true },
+                ],
+              },
+            ],
+          },
+        },
+      });
+
       // Update dispatch leg status if this was from a dispatch
       if (legId) {
         await supabase
@@ -259,6 +334,11 @@ export default function SubmitPirep() {
                 placeholder="VT-CIF"
               />
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="multiplier">Multiplier</Label>
+            <Input id="multiplier" value={`${calculatedMultiplier}x`} readOnly />
           </div>
 
           {/* Flight Time */}

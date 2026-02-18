@@ -281,6 +281,39 @@ export type Database = {
         }
         Relationships: []
       }
+      flight_hour_multipliers: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          max_hours: number | null
+          min_hours: number
+          multiplier: number
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          max_hours?: number | null
+          min_hours: number
+          multiplier?: number
+          name: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          max_hours?: number | null
+          min_hours?: number
+          multiplier?: number
+          name?: string
+        }
+        Relationships: []
+      }
       pireps: {
         Row: {
           aircraft_id: string
@@ -294,6 +327,7 @@ export type Database = {
           fuel_used: number | null
           id: string
           landing_rate: number | null
+          multiplier: number | null
           money_earned: number | null
           passengers: number | null
           rejection_reason: string | null
@@ -318,6 +352,7 @@ export type Database = {
           fuel_used?: number | null
           id?: string
           landing_rate?: number | null
+          multiplier?: number | null
           money_earned?: number | null
           passengers?: number | null
           rejection_reason?: string | null
@@ -342,6 +377,7 @@ export type Database = {
           fuel_used?: number | null
           id?: string
           landing_rate?: number | null
+          multiplier?: number | null
           money_earned?: number | null
           passengers?: number | null
           rejection_reason?: string | null
@@ -384,6 +420,7 @@ export type Database = {
           base_airport: string | null
           callsign: string
           created_at: string
+          discord_user_id: string | null
           id: string
           ifc_username: string | null
           is_approved: boolean
@@ -402,6 +439,7 @@ export type Database = {
           base_airport?: string | null
           callsign: string
           created_at?: string
+          discord_user_id?: string | null
           id?: string
           ifc_username?: string | null
           is_approved?: boolean
@@ -420,6 +458,7 @@ export type Database = {
           base_airport?: string | null
           callsign?: string
           created_at?: string
+          discord_user_id?: string | null
           id?: string
           ifc_username?: string | null
           is_approved?: boolean
