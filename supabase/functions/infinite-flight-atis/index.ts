@@ -1,4 +1,4 @@
-import { corsHeaders, json } from "../_shared/http.ts";
+import { corsHeaders, json } from "../shared/http.ts";
 
 const IF_API_KEY = Deno.env.get("INFINITE_FLIGHT_API_KEY");
 

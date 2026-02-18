@@ -8,6 +8,8 @@ import {
   Award,
   Settings,
   Users,
+  Database,
+  Calculator,
   LogOut
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -32,9 +34,13 @@ const pilotNavItems = [
 
 const adminNavItems = [
   { icon: Users, label: 'Admin Panel', href: '/admin' },
+  { icon: Plane, label: 'Fleet Management', href: '/admin/fleet' },
+  { icon: Users, label: 'Registrations', href: '/admin/registrations' },
   { icon: Plane, label: 'Assign Dispatch', href: '/admin/dispatch' },
   { icon: FileText, label: 'Review PIREPs', href: '/admin/pireps' },
-  { icon: Settings, label: 'Settings', href: '/admin/settings' },
+  { icon: Database, label: 'Route Import', href: '/admin/routes' },
+  { icon: Calculator, label: 'Hour Multipliers', href: '/admin/multipliers' },
+  { icon: Settings, label: 'Settings', href: '/admin' },
 ];
 
 export function Sidebar() {
