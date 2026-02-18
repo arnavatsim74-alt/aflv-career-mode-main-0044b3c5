@@ -23,6 +23,7 @@ interface Pirep {
   fuel_used: number | null;
   submitted_at: string;
   tail_number: string | null;
+  multiplier: number | null;
   aircraft: {
     name: string;
     type_code: string;
@@ -68,6 +69,7 @@ export function AdminPendingPireps() {
         fuel_used,
         submitted_at,
         tail_number,
+        multiplier,
         aircraft:aircraft(name, type_code, multiplier)
       `)
       .eq('status', 'pending')
@@ -119,7 +121,7 @@ export function AdminPendingPireps() {
     // Calculate rewards with base multiplier
     const aircraftMultiplier = pirep.aircraft?.multiplier || 1;
     const baseMultiplier = pirep.baseMultiplier || 1;
-    const totalMultiplier = aircraftMultiplier * baseMultiplier;
+    const totalMultiplier = pirep.multiplier ?? (aircraftMultiplier * baseMultiplier);
     
     const baseXP = Math.round(pirep.flight_time_hrs * 100);
     const baseMoney = Math.round(pirep.flight_time_hrs * 5000 * totalMultiplier);
@@ -276,7 +278,7 @@ export function AdminPendingPireps() {
                     {pirep.flight_number} • {pirep.departure_airport} → {pirep.arrival_airport}
                   </p>
                   
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-3 text-sm">
                     <div>
                       <p className="text-muted-foreground">Aircraft</p>
                       <p className="font-medium">{pirep.aircraft?.type_code}</p>
@@ -292,6 +294,12 @@ export function AdminPendingPireps() {
                     <div>
                       <p className="text-muted-foreground">Passengers</p>
                       <p className="font-medium">{pirep.passengers || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Multiplier</p>
+                      <p className="font-medium">
+                        {pirep.multiplier ? `${pirep.multiplier}x` : `${(pirep.aircraft?.multiplier || 1) * (pirep.baseMultiplier || 1)}x`}
+                      </p>
                     </div>
                   </div>
                   
