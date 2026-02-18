@@ -10,6 +10,22 @@ function getRandomInt(min: number, max: number) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
+type CatalogRoute = {
+  flight_number: string | null;
+  route_number: string | null;
+  dep_icao: string | null;
+  arr_icao: string | null;
+  aircraft: string | null;
+  duration_mins: number | null;
+  route_type: string | null;
+  rank: string | null;
+  notes: string | null;
+};
+
+function routeNumber(route: CatalogRoute) {
+  return route.route_number ?? route.flight_number ?? `SU${getRandomInt(1000, 9999)}`;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -80,7 +96,7 @@ Deno.serve(async (req) => {
     // Load route catalog
     const { data: catalog, error: catalogErr } = await admin
       .from("route_catalog")
-      .select("flight_number, dep_icao, arr_icao, aircraft, duration_mins")
+      .select("flight_number, route_number, dep_icao, arr_icao, aircraft, duration_mins, route_type, rank, notes")
       .limit(2000);
 
     if (catalogErr) throw catalogErr;
@@ -90,18 +106,16 @@ Deno.serve(async (req) => {
 
     // Build route chain from user's base that returns to origin
     const base = (profile?.base_airport ?? "UUEE").toUpperCase();
-    const remaining = [...catalog];
+    const remaining = [...catalog] as CatalogRoute[];
 
-    const selected: typeof catalog = [];
+    const selected: CatalogRoute[] = [];
     let current = base;
     const origin = base;
 
     // Select (legsRequested - 1) intermediate legs, then find return leg
     for (let i = 0; i < legsRequested - 1; i++) {
       const candidates = remaining.filter((r) => r.dep_icao?.toUpperCase() === current);
-      
-      // If no candidates from current position, pick randomly
-      const pickFrom = candidates.length > 0 ? candidates : remaining;
+      const pickFrom = candidates;
       const route = pickRandom(pickFrom);
       if (!route) break;
 
@@ -123,23 +137,18 @@ Deno.serve(async (req) => {
       const returnRoute = pickRandom(returnCandidates);
       selected.push(returnRoute);
     } else {
-      // If no direct return, find any route that ends at origin
-      const anyReturnCandidates = remaining.filter((r) => 
-        r.arr_icao?.toUpperCase() === origin
-      );
-      if (anyReturnCandidates.length > 0) {
-        const returnRoute = pickRandom(anyReturnCandidates);
-        selected.push(returnRoute);
-      } else {
-        // Create a synthetic return leg
-        selected.push({
-          flight_number: `SU${getRandomInt(1000, 9999)}`,
-          dep_icao: current,
-          arr_icao: origin,
-          aircraft: chosenAircraft?.type_code ?? "A320",
-          duration_mins: 120, // Default 2 hours
-        });
-      }
+      // Strict continuity: always return from current airport back to origin.
+      selected.push({
+        flight_number: null,
+        route_number: `SU${getRandomInt(1000, 9999)}`,
+        dep_icao: current,
+        arr_icao: origin,
+        aircraft: chosenAircraft?.type_code ?? "A320",
+        duration_mins: 120,
+        route_type: "AUTO",
+        rank: null,
+        notes: "Synthetic return leg for continuity",
+      });
     }
 
     if (selected.length === 0) {
@@ -174,9 +183,14 @@ Deno.serve(async (req) => {
       const mins = r.duration_mins ?? 60;
       const hrs = mins / 60;
       return {
-        flight_number: r.flight_number,
+        flight_number: routeNumber(r),
+        route_number: routeNumber(r),
         departure_airport: r.dep_icao,
         arrival_airport: r.arr_icao,
+        aircraft: r.aircraft,
+        route_type: r.route_type,
+        rank: r.rank,
+        notes: r.notes,
         estimated_time_hrs: hrs,
         distance_nm: Math.max(50, Math.round(hrs * avgKts)),
       };

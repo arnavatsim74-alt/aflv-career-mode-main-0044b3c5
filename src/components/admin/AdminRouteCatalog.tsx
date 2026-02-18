@@ -49,7 +49,7 @@ export function AdminRouteCatalog() {
     <SectionCard title="Route Catalog" icon={<Database className="h-5 w-5 text-muted-foreground" />}>
       <div className="space-y-3">
         <p className="text-sm text-muted-foreground">
-          Import your route CSV once; it will be used for automatic vCAREER assignments.
+          Admin route import format: <span className="font-mono">routeNumber,depICAO,arrICAO,aircraft,routeType,estFlightTime,rank,notes</span>.
         </p>
 
         <div className="flex flex-col sm:flex-row gap-2">
@@ -61,7 +61,7 @@ export function AdminRouteCatalog() {
             className="gap-2"
           >
             <Upload className="h-4 w-4" />
-            {isImporting ? "Importing..." : "Import bundled routes.csv"}
+            {isImporting ? "Importing..." : "Import bundled route catalog"}
           </Button>
 
           <label className="inline-flex">
@@ -85,7 +85,7 @@ export function AdminRouteCatalog() {
         </div>
 
         <p className="text-xs text-muted-foreground">
-          Tip: The app now includes your uploaded CSV at <span className="font-mono">/data/routes.csv</span>.
+          Tip: You can still use <span className="font-mono">/data/AFL_update.csv</span> or <span className="font-mono">/data/routes.csv</span>; both are normalized on import.
         </p>
       </div>
     </SectionCard>
