@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Navigate, useSearchParams, useNavigate } from 'react-router-dom';
-import { Plane, ArrowLeft, RefreshCw, Map, FileText, ExternalLink, Info } from 'lucide-react';
+import { Plane, ArrowLeft, RefreshCw, Map, FileText, ExternalLink } from 'lucide-react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -12,7 +12,7 @@ import { MetarWeatherCard } from '@/components/aviation/MetarWeatherCard';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function SimBriefDispatch() {
-  const { user, profile, loading: authLoading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { ofpData, loading, error, fetchOFP, generateOFP } = useSimBriefOFP();
@@ -25,11 +25,11 @@ export default function SimBriefDispatch() {
   const aircraftType = searchParams.get('type') || 'A320';
   const legId = searchParams.get('legId') || '';
 
-  const simbriefPid = profile?.simbrief_pid;
+  const simbriefPid = (searchParams.get('pid') || localStorage.getItem('simbrief_pid') || "").trim();
 
   useEffect(() => {
     const initializeOFP = async () => {
-      if (!simbriefPid || ofpData || loading || isGenerating) return;
+      if (ofpData || loading || isGenerating) return;
 
       setIsGenerating(true);
       
@@ -42,15 +42,17 @@ export default function SimBriefDispatch() {
         type: aircraftType,
       });
 
-      // Wait for SimBrief to process then fetch
+      // Wait for SimBrief to process then fetch (if pilot id provided in URL/local storage)
       setTimeout(async () => {
-        await fetchOFP(simbriefPid);
+        if (simbriefPid) {
+          await fetchOFP(simbriefPid);
+        }
         setIsGenerating(false);
       }, 4000);
     };
 
     initializeOFP();
-  }, [simbriefPid, origin, destination, flightNumber, aircraftType]);
+  }, [simbriefPid, origin, destination, flightNumber, aircraftType, ofpData, loading, isGenerating, generateOFP, fetchOFP]);
 
   if (authLoading) {
     return (
@@ -66,28 +68,10 @@ export default function SimBriefDispatch() {
     return <Navigate to="/auth" replace />;
   }
 
-  if (!simbriefPid) {
-    return (
-      <DashboardLayout>
-        <div className="flex flex-col items-center justify-center h-64 gap-4">
-          <Info className="h-12 w-12 text-muted-foreground" />
-          <h2 className="text-lg font-semibold">SimBrief PID Required</h2>
-          <p className="text-muted-foreground text-center max-w-md">
-            Please add your SimBrief Pilot ID in your profile settings to use dispatch features.
-          </p>
-          <Button variant="outline" onClick={() => navigate('/dispatch')}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Dispatch
-          </Button>
-        </div>
-      </DashboardLayout>
-    );
-  }
 
   const handleRefresh = async () => {
-    if (simbriefPid) {
-      await fetchOFP(simbriefPid);
-    }
+    if (!simbriefPid) return;
+    await fetchOFP(simbriefPid);
   };
 
   const formatTime = (seconds: string | null) => {
