@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
-import { Plane, ArrowLeft, RefreshCw, Map, FileText, ExternalLink, Search, Send, Info, Download } from 'lucide-react';
+import { Plane, ArrowLeft, Map, FileText, ExternalLink, Search, Send, Download } from 'lucide-react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -35,9 +35,9 @@ const AIRCRAFT_TYPES = [
 ];
 
 export default function FlightBriefing() {
-  const { user, profile, loading: authLoading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
-  const { ofpData, loading, error, fetchOFP, generateOFP } = useSimBriefOFP();
+  const { ofpData, loading, error, generateOFP } = useSimBriefOFP();
   const [activeTab, setActiveTab] = useState('overview');
   
   // Manual input form
@@ -48,7 +48,6 @@ export default function FlightBriefing() {
   const [passengers, setPassengers] = useState('');
   const [cargo, setCargo] = useState('');
   
-  const simbriefPid = profile?.simbrief_pid;
 
   if (authLoading) {
     return (
@@ -64,11 +63,6 @@ export default function FlightBriefing() {
     return <Navigate to="/auth" replace />;
   }
 
-  const handleFetchRecentFPL = async () => {
-    if (!simbriefPid) return;
-    await fetchOFP(simbriefPid);
-  };
-
   const handleGenerateOFP = async () => {
     if (!origin || !destination || !aircraftType) return;
     
@@ -82,11 +76,6 @@ export default function FlightBriefing() {
       cargo: cargo ? parseInt(cargo) : undefined,
     });
 
-    // After generation, fetch the latest OFP
-    if (simbriefPid) {
-      // Wait a bit for SimBrief to process
-      setTimeout(() => fetchOFP(simbriefPid), 3000);
-    }
   };
 
   const formatTime = (seconds: string | null) => {
@@ -129,12 +118,6 @@ export default function FlightBriefing() {
             </p>
           </div>
         </div>
-        {simbriefPid && (
-          <Button variant="outline" size="sm" onClick={handleFetchRecentFPL} disabled={loading} className="gap-2">
-            <Download className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-            Fetch Recent FPL
-          </Button>
-        )}
       </div>
 
       {/* Manual Input Form */}
@@ -145,15 +128,6 @@ export default function FlightBriefing() {
             <h3 className="text-lg font-semibold text-foreground">Flight Plan Details</h3>
           </div>
           
-          {!simbriefPid && (
-            <div className="bg-warning/10 border border-warning/30 rounded-lg p-4 mb-6">
-              <div className="flex items-center gap-2 text-warning">
-                <Info className="h-4 w-4" />
-                <p className="text-sm">Add your SimBrief PID in your profile to use flight planning features.</p>
-              </div>
-            </div>
-          )}
-
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
             <div className="space-y-2">
               <Label htmlFor="origin">Origin (ICAO) *</Label>
@@ -226,18 +200,12 @@ export default function FlightBriefing() {
           <div className="flex flex-wrap gap-3">
             <Button 
               onClick={handleGenerateOFP} 
-              disabled={!origin || !destination || !simbriefPid || loading}
+              disabled={!origin || !destination || loading}
               className="gap-2"
             >
               <Send className="h-4 w-4" />
               Generate OFP
             </Button>
-            {simbriefPid && (
-              <Button variant="outline" onClick={handleFetchRecentFPL} disabled={loading} className="gap-2">
-                <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-                Fetch Latest OFP
-              </Button>
-            )}
           </div>
         </div>
       )}
@@ -261,10 +229,6 @@ export default function FlightBriefing() {
           <div className="bg-gradient-to-r from-card to-muted/50 border border-border rounded-xl p-6 mb-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-foreground">Flight Plan Loaded</h3>
-              <Button variant="ghost" size="sm" onClick={handleFetchRecentFPL} className="gap-2">
-                <RefreshCw className="h-4 w-4" />
-                Refresh
-              </Button>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
               <div className="bg-muted/50 rounded-lg p-3">

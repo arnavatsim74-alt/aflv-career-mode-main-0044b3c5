@@ -11,6 +11,9 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
+const isMissingTableError = (code?: string | null, message?: string | null) =>
+  code === '42P01' || (message ?? '').toLowerCase().includes('does not exist');
+
 interface DispatchLeg {
   id: string;
   leg_number: number;
@@ -40,6 +43,12 @@ interface Aircraft {
   seats: number;
 }
 
+type MultiplierRule = {
+  id: string;
+  name: string;
+  multiplier: number;
+};
+
 export default function SubmitPirep() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
@@ -64,6 +73,8 @@ export default function SubmitPirep() {
   const [landingRate, setLandingRate] = useState('');
   const [fuelUsed, setFuelUsed] = useState('');
   const [calculatedMultiplier, setCalculatedMultiplier] = useState(1);
+  const [multiplierRules, setMultiplierRules] = useState<MultiplierRule[]>([]);
+  const [selectedMultiplierId, setSelectedMultiplierId] = useState('auto');
 
   useEffect(() => {
     if (user) {
@@ -123,6 +134,35 @@ export default function SubmitPirep() {
   };
 
   useEffect(() => {
+    const loadMultiplierRules = async () => {
+      const { data, error } = await supabase
+        .from('flight_hour_multipliers')
+        .select('id, name, multiplier')
+        .eq('is_active', true)
+        .order('multiplier', { ascending: false });
+
+      if (error) {
+        if (!isMissingTableError(error.code, error.message)) {
+          console.error('Failed to load multiplier rules:', error);
+        }
+        setMultiplierRules([]);
+        setSelectedMultiplierId('auto');
+        return;
+      }
+
+      const mapped = (data ?? []).map((r) => ({
+        id: r.id,
+        name: r.name,
+        multiplier: Number(r.multiplier ?? 1),
+      }));
+
+      setMultiplierRules(mapped);
+    };
+
+    void loadMultiplierRules();
+  }, []);
+
+  useEffect(() => {
     if (!user || !selectedAircraftId) return;
 
     const recalcMultiplier = async () => {
@@ -153,20 +193,26 @@ export default function SubmitPirep() {
       }
 
       let hourMultiplier = 1;
-      const { data: hourRules } = await supabase
+      const { data: hourRules, error: hourRuleError } = await supabase
         .from('flight_hour_multipliers')
         .select('multiplier, min_hours, max_hours')
         .eq('is_active', true)
         .order('multiplier', { ascending: false });
 
-      const matchedRule = hourRules?.find((rule) => {
-        const minHours = Number(rule.min_hours);
-        const maxHours = rule.max_hours == null ? null : Number(rule.max_hours);
-        return totalHours >= minHours && (maxHours == null || totalHours <= maxHours);
-      });
+      if (hourRuleError) {
+        if (!isMissingTableError(hourRuleError.code, hourRuleError.message)) {
+          console.error('Failed to load hour multiplier rules:', hourRuleError);
+        }
+      } else {
+        const matchedRule = hourRules?.find((rule) => {
+          const minHours = Number(rule.min_hours);
+          const maxHours = rule.max_hours == null ? null : Number(rule.max_hours);
+          return totalHours >= minHours && (maxHours == null || totalHours <= maxHours);
+        });
 
-      if (matchedRule) {
-        hourMultiplier = Number(matchedRule.multiplier ?? 1);
+        if (matchedRule) {
+          hourMultiplier = Number(matchedRule.multiplier ?? 1);
+        }
       }
 
       setCalculatedMultiplier(Number((aircraftMultiplier * baseMultiplier * hourMultiplier).toFixed(2)));
@@ -188,6 +234,9 @@ export default function SubmitPirep() {
 
     const totalHours = parseFloat(flightTimeHrs || '0') + (parseInt(flightTimeMins || '0') / 60);
 
+    const selectedRule = multiplierRules.find((r) => r.id === selectedMultiplierId);
+    const appliedMultiplier = selectedRule ? selectedRule.multiplier : calculatedMultiplier;
+
     const pirepData = {
       user_id: user!.id,
       dispatch_leg_id: legId || null,
@@ -203,7 +252,7 @@ export default function SubmitPirep() {
       cargo_weight_kg: cargoWeight ? parseInt(cargoWeight) : null,
       landing_rate: landingRate ? parseInt(landingRate) : null,
       fuel_used: fuelUsed ? parseInt(fuelUsed) : null,
-      multiplier: calculatedMultiplier,
+      multiplier: appliedMultiplier,
       status: 'pending',
     };
 
@@ -225,7 +274,7 @@ export default function SubmitPirep() {
                 description: `${pirepData.flight_number} ${pirepData.departure_airport} → ${pirepData.arrival_airport}`,
                 fields: [
                   { name: 'Pilot', value: user!.id, inline: false },
-                  { name: 'Multiplier', value: `${calculatedMultiplier}x`, inline: true },
+                  { name: 'Multiplier', value: `${appliedMultiplier}x`, inline: true },
                   { name: 'Aircraft', value: selectedAircraft?.type_code ?? '-', inline: true },
                 ],
               },
@@ -336,9 +385,27 @@ export default function SubmitPirep() {
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="multiplier">Multiplier</Label>
-            <Input id="multiplier" value={`${calculatedMultiplier}x`} readOnly />
+          <div className="grid md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="multiplierValue">Calculated Multiplier</Label>
+              <Input id="multiplierValue" value={`${calculatedMultiplier}x`} readOnly />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="multiplierSelect">Apply Multiplier</Label>
+              <Select value={selectedMultiplierId} onValueChange={setSelectedMultiplierId}>
+                <SelectTrigger id="multiplierSelect">
+                  <SelectValue placeholder="Select multiplier" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="auto">Auto ({calculatedMultiplier}x)</SelectItem>
+                  {multiplierRules.map((rule) => (
+                    <SelectItem key={rule.id} value={rule.id}>
+                      {rule.name} ({rule.multiplier}x)
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {/* Flight Time */}

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Navigate, useSearchParams, useNavigate } from 'react-router-dom';
-import { Plane, ArrowLeft, RefreshCw, Map, Navigation, Fuel, CloudRain, List, Info, FileText, Download, ExternalLink } from 'lucide-react';
+import { Plane, ArrowLeft, RefreshCw, Map, Navigation, Fuel, CloudRain, List, FileText, Download, ExternalLink } from 'lucide-react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -11,14 +11,14 @@ import { ATISCard } from '@/components/aviation/ATISCard';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function OFPViewer() {
-  const { user, profile, loading: authLoading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { ofpData, loading, error, fetchOFP } = useSimBriefOFP();
   const [activeTab, setActiveTab] = useState('overview');
 
   const legId = searchParams.get('legId') || '';
-  const simbriefPid = profile?.simbrief_pid;
+  const simbriefPid = (searchParams.get('pid') || localStorage.getItem('simbrief_pid') || "").trim();
 
   useEffect(() => {
     if (simbriefPid && !ofpData && !loading) {
@@ -38,24 +38,6 @@ export default function OFPViewer() {
 
   if (!user) {
     return <Navigate to="/auth" replace />;
-  }
-
-  if (!simbriefPid) {
-    return (
-      <DashboardLayout>
-        <div className="flex flex-col items-center justify-center h-64 gap-4">
-          <Info className="h-12 w-12 text-muted-foreground" />
-          <h2 className="text-lg font-semibold">SimBrief PID Required</h2>
-          <p className="text-muted-foreground text-center max-w-md">
-            Please add your SimBrief Pilot ID in your profile settings to view OFP data.
-          </p>
-          <Button variant="outline" onClick={() => navigate('/dispatch')}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Dispatch
-          </Button>
-        </div>
-      </DashboardLayout>
-    );
   }
 
   const formatTime = (seconds: string | null) => {
@@ -92,7 +74,7 @@ export default function OFPViewer() {
             </div>
           )}
         </div>
-        <Button variant="outline" size="sm" onClick={() => fetchOFP(simbriefPid)} disabled={loading} className="gap-2">
+        <Button variant="outline" size="sm" onClick={() => simbriefPid && fetchOFP(simbriefPid)} disabled={loading || !simbriefPid} className="gap-2">
           <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
           Refresh
         </Button>
