@@ -32,7 +32,6 @@ export default function Auth() {
   const [signupName, setSignupName] = useState('');
   const [signupCallsign, setSignupCallsign] = useState('');
   const [signupBase, setSignupBase] = useState('');
-  const [signupSimbriefPid, setSignupSimbriefPid] = useState('');
   const [signupIfcUsername, setSignupIfcUsername] = useState('');
   const [showSignup, setShowSignup] = useState(false);
 
@@ -107,7 +106,7 @@ export default function Auth() {
       return;
     }
 
-    const { error, user: newUser } = await signUp(signupEmail, signupPassword, signupName, signupCallsign, signupBase, signupSimbriefPid, signupIfcUsername);
+    const { error, user: newUser } = await signUp(signupEmail, signupPassword, signupName, signupCallsign, signupBase, signupIfcUsername);
     
     if (error) {
       toast({
@@ -306,17 +305,6 @@ export default function Auth() {
               <div className="border-t border-border pt-4 mt-4">
                 <p className="text-xs text-muted-foreground mb-3">Optional - Can be added later</p>
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <Label htmlFor="simbrief-pid" className="text-card-foreground text-xs">SimBrief PID</Label>
-                    <Input
-                      id="simbrief-pid"
-                      type="text"
-                      placeholder="e.g., 123456"
-                      value={signupSimbriefPid}
-                      onChange={(e) => setSignupSimbriefPid(e.target.value)}
-                      className="text-sm"
-                    />
-                  </div>
                   <div className="space-y-1">
                     <Label htmlFor="ifc-username" className="text-card-foreground text-xs">IFC Username</Label>
                     <Input

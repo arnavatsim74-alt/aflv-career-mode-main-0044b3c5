@@ -15,7 +15,6 @@ interface Profile {
   base_airport: string;
   active_aircraft_family: string;
   is_approved: boolean;
-  simbrief_pid: string | null;
   ifc_username: string | null;
 }
 
@@ -26,7 +25,7 @@ interface AuthContextType {
   isAdmin: boolean;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
-  signUp: (email: string, password: string, name: string, callsign: string, baseAirport?: string, simbriefPid?: string, ifcUsername?: string) => Promise<{ error: Error | null; user: User | null }>;
+  signUp: (email: string, password: string, name: string, callsign: string, baseAirport?: string, ifcUsername?: string) => Promise<{ error: Error | null; user: User | null }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
@@ -115,7 +114,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error };
   };
 
-  const signUp = async (email: string, password: string, name: string, callsign: string, baseAirport: string = 'UUEE', simbriefPid?: string, ifcUsername?: string) => {
+  const signUp = async (email: string, password: string, name: string, callsign: string, baseAirport: string = 'UUEE', ifcUsername?: string) => {
     const redirectUrl = `${window.location.origin}/`;
     
     const { data, error } = await supabase.auth.signUp({
@@ -138,7 +137,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           callsign: callsign.toUpperCase(),
           base_airport: baseAirport,
           is_approved: false,
-          simbrief_pid: simbriefPid || null,
           ifc_username: ifcUsername || null,
         });
 
@@ -155,7 +153,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           name,
           callsign: callsign.toUpperCase(),
           base_airport: baseAirport,
-          simbrief_pid: simbriefPid || null,
           ifc_username: ifcUsername || null,
           status: 'pending',
         });
