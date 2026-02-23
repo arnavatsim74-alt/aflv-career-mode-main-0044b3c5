@@ -11,6 +11,9 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
+const isMissingTableError = (code?: string | null, message?: string | null) =>
+  code === '42P01' || (message ?? '').toLowerCase().includes('does not exist');
+
 interface DispatchLeg {
   id: string;
   leg_number: number;
@@ -153,20 +156,26 @@ export default function SubmitPirep() {
       }
 
       let hourMultiplier = 1;
-      const { data: hourRules } = await supabase
+      const { data: hourRules, error: hourRuleError } = await supabase
         .from('flight_hour_multipliers')
         .select('multiplier, min_hours, max_hours')
         .eq('is_active', true)
         .order('multiplier', { ascending: false });
 
-      const matchedRule = hourRules?.find((rule) => {
-        const minHours = Number(rule.min_hours);
-        const maxHours = rule.max_hours == null ? null : Number(rule.max_hours);
-        return totalHours >= minHours && (maxHours == null || totalHours <= maxHours);
-      });
+      if (hourRuleError) {
+        if (!isMissingTableError(hourRuleError.code, hourRuleError.message)) {
+          console.error('Failed to load hour multiplier rules:', hourRuleError);
+        }
+      } else {
+        const matchedRule = hourRules?.find((rule) => {
+          const minHours = Number(rule.min_hours);
+          const maxHours = rule.max_hours == null ? null : Number(rule.max_hours);
+          return totalHours >= minHours && (maxHours == null || totalHours <= maxHours);
+        });
 
-      if (matchedRule) {
-        hourMultiplier = Number(matchedRule.multiplier ?? 1);
+        if (matchedRule) {
+          hourMultiplier = Number(matchedRule.multiplier ?? 1);
+        }
       }
 
       setCalculatedMultiplier(Number((aircraftMultiplier * baseMultiplier * hourMultiplier).toFixed(2)));

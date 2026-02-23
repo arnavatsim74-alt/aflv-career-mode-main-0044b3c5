@@ -16,6 +16,9 @@ type Rule = {
   is_active: boolean;
 };
 
+const isMissingTableError = (code?: string | null, message?: string | null) =>
+  code === '42P01' || (message ?? '').toLowerCase().includes('does not exist');
+
 export function AdminFlightHourMultipliers() {
   const { user } = useAuth();
   const [rules, setRules] = useState<Rule[]>([]);
@@ -31,6 +34,11 @@ export function AdminFlightHourMultipliers() {
       .select('id, name, min_hours, max_hours, multiplier, is_active')
       .order('min_hours', { ascending: true });
     if (error) {
+      if (isMissingTableError(error.code, error.message)) {
+        toast.error('Multiplier table not found. Run latest migrations first.');
+        setRules([]);
+        return;
+      }
       toast.error(error.message);
       return;
     }
@@ -54,6 +62,11 @@ export function AdminFlightHourMultipliers() {
     });
     setLoading(false);
     if (error) {
+      if (isMissingTableError(error.code, error.message)) {
+        toast.error('Multiplier table not found. Run latest migrations first.');
+        setRules([]);
+        return;
+      }
       toast.error(error.message);
       return;
     }
@@ -68,6 +81,11 @@ export function AdminFlightHourMultipliers() {
   const removeRule = async (id: string) => {
     const { error } = await supabase.from('flight_hour_multipliers').delete().eq('id', id);
     if (error) {
+      if (isMissingTableError(error.code, error.message)) {
+        toast.error('Multiplier table not found. Run latest migrations first.');
+        setRules([]);
+        return;
+      }
       toast.error(error.message);
       return;
     }
