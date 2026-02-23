@@ -213,10 +213,9 @@ export function MetarWeatherCard({ icao, label, metar, runwayHeading = 0 }: Meta
 
   const windDirection = parsed.windDir === 'VRB' ? 0 : parsed.windDir;
   const isVariable = parsed.windDir === 'VRB';
-  const windComponents = useMemo(() => {
-    if (isVariable || !runwayHeading) return null;
-    return calculateWindComponents(windDirection, parsed.windSpeed, runwayHeading);
-  }, [windDirection, parsed.windSpeed, runwayHeading, isVariable]);
+  const windComponents = isVariable || !runwayHeading
+    ? null
+    : calculateWindComponents(windDirection, parsed.windSpeed, runwayHeading);
 
   // SVG dimensions for compass
   const size = 240;
