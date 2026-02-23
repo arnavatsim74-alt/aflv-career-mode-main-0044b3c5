@@ -43,6 +43,17 @@ interface CareerRequest {
   requested_at: string;
 }
 
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const getInvokeErrorMessage = (error: unknown) => {
+  if (!error) return 'Auto assignment failed';
+  if (typeof error === 'string') return error;
+  if (error instanceof Error) return error.message;
+
+  const maybe = error as { message?: string; context?: { error?: string }; details?: string };
+  return maybe.context?.error || maybe.message || maybe.details || 'Auto assignment failed';
+};
+
 export default function Dispatch() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
@@ -181,6 +192,25 @@ export default function Dispatch() {
     setIsLoading(false);
   };
 
+  const autoAssignCareer = async () => {
+    let lastMessage = 'Auto assignment failed';
+
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      const { error } = await supabase.functions.invoke('auto-assign-career', {
+        body: { legs: 3 },
+      });
+
+      if (!error) return;
+
+      lastMessage = getInvokeErrorMessage(error);
+      if (attempt < 2) {
+        await wait(350);
+      }
+    }
+
+    throw new Error(lastMessage);
+  };
+
   const requestCareer = async () => {
     setIsRequesting(true);
 
@@ -202,16 +232,12 @@ export default function Dispatch() {
   const requestCareerAuto = async () => {
     setIsRequesting(true);
     try {
-      const { error } = await supabase.functions.invoke('auto-assign-career', {
-        body: { legs: 3 },
-      });
-
-      if (error) throw error;
+      await autoAssignCareer();
 
       toast.success('vCAREER auto-assigned!');
       fetchDispatchData();
     } catch (e: any) {
-      toast.error(e?.message ?? 'Auto assignment failed (import routes first)');
+      toast.error(getInvokeErrorMessage(e));
     } finally {
       setIsRequesting(false);
     }
@@ -308,19 +334,13 @@ export default function Dispatch() {
       }
 
       // Auto-assign new vCAREER instead of creating pending manual request
-      const { error: autoAssignError } = await supabase.functions.invoke('auto-assign-career', {
-        body: { legs: 3 },
-      });
-
-      if (autoAssignError) {
-        throw autoAssignError;
-      }
+      await autoAssignCareer();
 
       toast.success('New vCAREER auto-assigned!');
       fetchDispatchData();
     } catch (e: any) {
       console.error('requestAnotherCareer error:', e);
-      toast.error(e?.message ?? 'Failed to request new career');
+      toast.error(getInvokeErrorMessage(e));
     } finally {
       setIsRequesting(false);
     }

@@ -26,6 +26,33 @@ function routeNumber(route: CatalogRoute) {
   return route.route_number ?? route.flight_number ?? `SU${getRandomInt(1000, 9999)}`;
 }
 
+function pickSyntheticArrival(catalog: CatalogRoute[], current: string, origin: string) {
+  const airports = new Set<string>();
+  for (const route of catalog) {
+    if (route.dep_icao) airports.add(route.dep_icao.toUpperCase());
+    if (route.arr_icao) airports.add(route.arr_icao.toUpperCase());
+  }
+
+  const candidates = [...airports].filter((icao) => icao !== current);
+  if (candidates.length > 0) return pickRandom(candidates);
+  if (origin !== current) return origin;
+  return "UUEE";
+}
+
+function buildSyntheticLeg(depIcao: string, arrIcao: string, aircraftCode: string, notes: string): CatalogRoute {
+  return {
+    flight_number: null,
+    route_number: `SU${getRandomInt(1000, 9999)}`,
+    dep_icao: depIcao,
+    arr_icao: arrIcao,
+    aircraft: aircraftCode,
+    duration_mins: 120,
+    route_type: "AUTO",
+    rank: null,
+    notes,
+  };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -115,9 +142,20 @@ Deno.serve(async (req) => {
     // Select (legsRequested - 1) intermediate legs, then find return leg
     for (let i = 0; i < legsRequested - 1; i++) {
       const candidates = remaining.filter((r) => r.dep_icao?.toUpperCase() === current);
-      const pickFrom = candidates;
-      const route = pickRandom(pickFrom);
-      if (!route) break;
+      const route = pickRandom(candidates);
+
+      if (!route) {
+        const syntheticArrival = pickSyntheticArrival(catalog, current, origin);
+        const syntheticLeg = buildSyntheticLeg(
+          current,
+          syntheticArrival,
+          chosenAircraft?.type_code ?? "A320",
+          "Synthetic leg (no matching catalog route found)",
+        );
+        selected.push(syntheticLeg);
+        current = syntheticArrival;
+        continue;
+      }
 
       selected.push(route);
       // Remove from remaining (avoid duplicates)
@@ -138,17 +176,14 @@ Deno.serve(async (req) => {
       selected.push(returnRoute);
     } else {
       // Strict continuity: always return from current airport back to origin.
-      selected.push({
-        flight_number: null,
-        route_number: `SU${getRandomInt(1000, 9999)}`,
-        dep_icao: current,
-        arr_icao: origin,
-        aircraft: chosenAircraft?.type_code ?? "A320",
-        duration_mins: 120,
-        route_type: "AUTO",
-        rank: null,
-        notes: "Synthetic return leg for continuity",
-      });
+      selected.push(
+        buildSyntheticLeg(
+          current,
+          origin,
+          chosenAircraft?.type_code ?? "A320",
+          "Synthetic return leg for continuity",
+        ),
+      );
     }
 
     if (selected.length === 0) {
